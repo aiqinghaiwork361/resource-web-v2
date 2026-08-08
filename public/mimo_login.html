@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiMo AI — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg-deep:#06060e;
+--bg-mid:#0b0b1a;
+--surface:rgba(14,16,30,0.72);
+--border:rgba(100,180,255,0.08);
+--accent:#00d4ff;
+--accent-2:#7b61ff;
+--accent-3:#ff3cac;
+--glow:rgba(0,212,255,0.15);
+--text:#e8ecf4;
+--text-muted:#5a6078;
+--radius:16px;
+}
+html,body{height:100%;font-family:'Outfit',sans-serif;background:var(--bg-deep);color:var(--text);overflow:hidden}
+/* === BACKGROUND LAYERS === */
+.bg-canvas{position:fixed;inset:0;z-index:0}
+/* Gradient mesh */
+.bg-canvas::before{
+content:'';position:absolute;inset:0;
+background:
+radial-gradient(ellipse 80% 60% at 15% 80%, rgba(123,97,255,0.12) 0%, transparent 60%),
+radial-gradient(ellipse 60% 80% at 85% 20%, rgba(0,212,255,0.10) 0%, transparent 55%),
+radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,60,172,0.04) 0%, transparent 70%),
+var(--bg-deep);
+}
+/* Grid overlay */
+.grid-overlay{
+position:absolute;inset:0;
+background-image:
+linear-gradient(rgba(100,180,255,0.03) 1px, transparent 1px),
+linear-gradient(90deg, rgba(100,180,255,0.03) 1px, transparent 1px);
+background-size:60px 60px;
+animation:gridShift 20s linear infinite;
+}
+@keyframes gridShift{to{background-position:60px 60px}}
+/* Particle canvas */
+#particles{position:absolute;inset:0}
+/* Noise grain */
+.grain{
+position:absolute;inset:-50%;width:200%;height:200%;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+opacity:0.5;pointer-events:none;
+animation:grainDrift 8s steps(10) infinite;
+}
+@keyframes grainDrift{
+0%,100%{transform:translate(0,0)}10%{transform:translate(-5%,-10%)}
+30%{transform:translate(3%,-15%)}50%{transform:translate(12%,9%)}
+70%{transform:translate(9%,4%)}90%{transform:translate(-1%,7%)}
+}
+/* Scan line */
+.scanline{
+position:absolute;left:0;width:100%;height:2px;
+background:linear-gradient(90deg,transparent,rgba(0,212,255,0.06),transparent);
+animation:scanMove 6s ease-in-out infinite;pointer-events:none;z-index:1;
+}
+@keyframes scanMove{0%{top:-2px}100%{top:100%}}
+/* === MAIN LAYOUT === */
+.wrapper{
+position:relative;z-index:10;display:flex;align-items:center;justify-content:center;
+height:100vh;padding:24px;
+}
+.login-container{
+display:grid;grid-template-columns:1fr 1fr;max-width:960px;width:100%;
+border-radius:24px;overflow:hidden;
+border:1px solid var(--border);
+background:var(--surface);
+backdrop-filter:blur(40px) saturate(1.3);
+box-shadow:
+0 0 80px rgba(0,212,255,0.04),
+0 0 200px rgba(123,97,255,0.03),
+inset 0 1px 0 rgba(255,255,255,0.04);
+opacity:0;animation:containerReveal 1s cubic-bezier(0.16,1,0.3,1) 0.3s forwards;
+}
+@keyframes containerReveal{from{opacity:0;transform:translateY(30px) scale(0.97)}to{opacity:1;transform:none}}
+/* === LEFT: BRANDING === */
+.brand-side{
+position:relative;padding:48px 40px;display:flex;flex-direction:column;justify-content:space-between;
+border-right:1px solid var(--border);overflow:hidden;
+}
+/* Animated orb */
+.orb{
+position:absolute;width:300px;height:300px;
+top:50%;left:50%;transform:translate(-50%,-50%);
+border-radius:50%;filter:blur(60px);opacity:0.25;
+background:conic-gradient(from 180deg,var(--accent),var(--accent-2),var(--accent-3),var(--accent));
+animation:orbSpin 12s linear infinite;
+}
+@keyframes orbSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.orb-inner{
+position:absolute;width:140px;height:140px;
+top:50%;left:50%;transform:translate(-50%,-50%);
+border-radius:50%;
+border:1px solid rgba(0,212,255,0.15);
+animation:pulse 3s ease-in-out infinite alternate;
+}
+@keyframes pulse{from{transform:translate(-50%,-50%) scale(1);opacity:0.6}to{transform:translate(-50%,-50%) scale(1.15);opacity:1}}
+.brand-top{position:relative;z-index:1}
+.brand-logo{
+font-family:'JetBrains Mono',monospace;font-weight:500;font-size:13px;
+letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);
+display:flex;align-items:center;gap:8px;
+}
+.brand-logo .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);
+box-shadow:0 0 8px var(--accent);animation:dotBlink 2s ease infinite}
+@keyframes dotBlink{0%,100%{opacity:1}50%{opacity:0.3}}
+.brand-bottom{position:relative;z-index:1}
+.brand-tagline{font-size:14px;color:var(--text-muted);line-height:1.7;max-width:280px}
+.brand-tagline strong{color:var(--text);font-weight:500}
+/* Floating data lines */
+.data-lines{position:absolute;z-index:1;bottom:100px;left:40px;right:40px}
+.data-line{
+display:flex;align-items:center;gap:8px;margin-bottom:6px;
+font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);
+opacity:0;animation:dataFade 0.5s ease forwards;
+}
+.data-line:nth-child(1){animation-delay:1.2s}
+.data-line:nth-child(2){animation-delay:1.5s}
+.data-line:nth-child(3){animation-delay:1.8s}
+@keyframes dataFade{to{opacity:0.5}}
+.data-line .bar{height:1px;flex:1;background:linear-gradient(90deg,rgba(0,212,255,0.3),transparent)}
+/* === RIGHT: FORM === */
+.form-side{padding:48px 40px;display:flex;flex-direction:column;justify-content:center}
+.form-header{margin-bottom:36px}
+.form-header h1{
+font-size:26px;font-weight:600;letter-spacing:-0.02em;margin-bottom:8px;
+background:linear-gradient(135deg,var(--text) 0%, rgba(232,236,244,0.6) 100%);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.form-header p{font-size:14px;color:var(--text-muted)}
+/* Social login */
+.social-row{display:flex;gap:12px;margin-bottom:28px}
+.social-btn{
+flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+padding:12px;border-radius:12px;border:1px solid var(--border);
+background:rgba(255,255,255,0.02);color:var(--text-muted);font-size:13px;
+cursor:pointer;transition:all 0.25s ease;font-family:inherit;
+}
+.social-btn:hover{
+border-color:rgba(0,212,255,0.2);background:rgba(0,212,255,0.04);color:var(--text);
+}
+.social-btn svg{width:18px;height:18px}
+/* Divider */
+.divider{
+display:flex;align-items:center;gap:16px;margin-bottom:28px;
+font-size:11px;font-family:'JetBrains Mono',monospace;
+letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);
+}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+/* Input group */
+.input-group{margin-bottom:20px}
+.input-group label{
+display:block;font-size:12px;font-weight:500;color:var(--text-muted);
+margin-bottom:8px;letter-spacing:0.04em;
+}
+.input-wrap{
+position:relative;display:flex;align-items:center;
+border:1px solid var(--border);border-radius:12px;
+background:rgba(255,255,255,0.02);transition:all 0.3s ease;
+overflow:hidden;
+}
+.input-wrap:focus-within{
+border-color:rgba(0,212,255,0.3);
+box-shadow:0 0 0 3px rgba(0,212,255,0.06),0 0 20px rgba(0,212,255,0.04);
+}
+.input-wrap .icon{
+padding:0 0 0 16px;color:var(--text-muted);display:flex;align-items:center;
+transition:color 0.3s ease;
+}
+.input-wrap:focus-within .icon{color:var(--accent)}
+.input-wrap .icon svg{width:16px;height:16px}
+.input-wrap input{
+flex:1;padding:14px 16px;background:none;border:none;outline:none;
+color:var(--text);font-size:14px;font-family:inherit;
+}
+.input-wrap input::placeholder{color:rgba(90,96,120,0.6)}
+.input-wrap .toggle-pw{
+padding:0 16px;background:none;border:none;color:var(--text-muted);
+cursor:pointer;display:flex;align-items:center;transition:color 0.2s;
+}
+.input-wrap .toggle-pw:hover{color:var(--text)}
+.input-wrap .toggle-pw svg{width:16px;height:16px}
+/* Options row */
+.options-row{
+display:flex;justify-content:space-between;align-items:center;
+margin-bottom:28px;font-size:13px;
+}
+.checkbox-wrap{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text-muted)}
+.checkbox-wrap input{display:none}
+.checkbox-box{
+width:16px;height:16px;border-radius:5px;border:1px solid var(--border);
+display:flex;align-items:center;justify-content:center;transition:all 0.2s ease;
+}
+.checkbox-wrap input:checked+.checkbox-box{
+background:var(--accent);border-color:var(--accent);
+}
+.checkbox-wrap input:checked+.checkbox-box svg{opacity:1}
+.checkbox-box svg{width:10px;height:10px;opacity:0;transition:opacity 0.2s}
+.forgot-link{
+color:var(--text-muted);text-decoration:none;font-size:13px;
+transition:color 0.2s;
+}
+.forgot-link:hover{color:var(--accent)}
+/* Submit button */
+.submit-btn{
+position:relative;width:100%;padding:15px;border:none;border-radius:12px;
+font-family:inherit;font-size:14px;font-weight:600;letter-spacing:0.02em;
+color:var(--bg-deep);cursor:pointer;overflow:hidden;
+background:linear-gradient(135deg,var(--accent),var(--accent-2));
+transition:all 0.3s ease;
+}
+.submit-btn:hover{transform:translateY(-1px);box-shadow:0 8px 30px rgba(0,212,255,0.2)}
+.submit-btn:active{transform:translateY(0)}
+.submit-btn .shimmer{
+position:absolute;inset:0;
+background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,0.25) 50%,transparent 60%);
+transform:translateX(-100%);transition:none;
+}
+.submit-btn:hover .shimmer{animation:shimmer 0.6s ease forwards}
+@keyframes shimmer{to{transform:translateX(100%)}}
+/* Sign up link */
+.signup-link{text-align:center;margin-top:24px;font-size:13px;color:var(--text-muted)}
+.signup-link a{color:var(--accent);text-decoration:none;font-weight:500;transition:opacity 0.2s}
+.signup-link a:hover{opacity:0.8}
+/* === RESPONSIVE === */
+@media(max-width:768px){
+.login-container{grid-template-columns:1fr;max-width:440px}
+.brand-side{display:none}
+.form-side{padding:36px 28px}
+}
+</style>
+</head>
+<body>
+<!-- Background layers -->
+<div class="bg-canvas">
+<canvas id="particles"></canvas>
+<div class="grid-overlay"></div>
+<div class="grain"></div>
+<div class="scanline"></div>
+</div>
+<!-- Main -->
+<div class="wrapper">
+<div class="login-container">
+<!-- Left: Branding -->
+<div class="brand-side">
+<div class="orb"></div>
+<div class="orb-inner"></div>
+<div class="brand-top">
+<div class="brand-logo">
+<span class="dot"></span>
+MiMo AI
+</div>
+</div>
+<div class="data-lines">
+<div class="data-line"><span>SYS</span><span class="bar"></span><span>ONLINE</span></div>
+<div class="data-line"><span>MODEL</span><span class="bar"></span><span>1T PARAMS</span></div>
+<div class="data-line"><span>CTX</span><span class="bar"></span><span>1M TOKENS</span></div>
+</div>
+<div class="brand-bottom">
+<p class="brand-tagline">
+<strong>智能，从这里开始。</strong><br>
+由小米大模型Core团队打造的下一代AI引擎，重新定义人机交互。
+</p>
+</div>
+</div>
+<!-- Right: Form -->
+<div class="form-side">
+<div class="form-header">
+<h1>欢迎回来</h1>
+<p>登录你的 MiMo AI 账户，继续探索</p>
+</div>
+<div class="social-row">
+<button class="social-btn" type="button">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+GitHub
+</button>
+<button class="social-btn" type="button">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Z"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+Google
+</button>
+</div>
+<div class="divider">OR</div>
+<form id="loginForm" autocomplete="off">
+<div class="input-group">
+<label for="email">邮箱地址</label>
+<div class="input-wrap">
+<span class="icon">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+</span>
+<input type="email" id="email" placeholder="name@example.com" required>
+</div>
+</div>
+<div class="input-group">
+<label for="password">密码</label>
+<div class="input-wrap">
+<span class="icon">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+</span>
+<input type="password" id="password" placeholder="输入你的密码" required>
+<button type="button" class="toggle-pw" id="togglePw" aria-label="切换密码可见">
+<svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+</button>
+</div>
+</div>
+<div class="options-row">
+<label class="checkbox-wrap">
+<input type="checkbox">
+<span class="checkbox-box">
+<svg viewBox="0 0 24 24" fill="none" stroke="#06060e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+</span>
+记住我
+</label>
+<a href="#" class="forgot-link">忘记密码?</a>
+</div>
+<button type="submit" class="submit-btn">
+<span class="shimmer"></span>
+登 录
+</button>
+</form>
+<p class="signup-link">还没有账户? <a href="#">立即注册</a></p>
+</div>
+</div>
+</div>
+<script>
+// === Particle field ===
+(function(){
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let w, h, particles = [], mouse = {x:null, y:null};
+const PARTICLE_COUNT = 80;
+const CONNECT_DIST = 120;
+function resize(){
+w = canvas.width = window.innerWidth;
+h = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+document.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+document.addEventListener('mouseleave', () => { mouse.x = null; });
+class Particle {
+constructor(){ this.reset(); }
+reset(){
+this.x = Math.random()*w;
+this.y = Math.random()*h;
+this.vx = (Math.random()-0.5)*0.3;
+this.vy = (Math.random()-0.5)*0.3;
+this.r = Math.random()*1.5+0.5;
+this.alpha = Math.random()*0.4+0.1;
+}
+update(){
+this.x += this.vx;
+this.y += this.vy;
+if(this.x<0||this.x>w) this.vx*=-1;
+if(this.y<0||this.y>h) this.vy*=-1;
+if(mouse.x!==null){
+const dx = mouse.x-this.x, dy = mouse.y-this.y;
+const dist = Math.sqrt(dx*dx+dy*dy);
+if(dist<180){
+this.x -= dx*0.003;
+this.y -= dy*0.003;
+}
+}
+}
+draw(){
+ctx.beginPath();
+ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+ctx.fillStyle = `rgba(0,212,255,${this.alpha})`;
+ctx.fill();
+}
+}
+for(let i=0;i<PARTICLE_COUNT;i++) particles.push(new Particle());
+function animate(){
+ctx.clearRect(0,0,w,h);
+for(let i=0;i<particles.length;i++){
+particles[i].update();
+particles[i].draw();
+for(let j=i+1;j<particles.length;j++){
+const dx=particles[i].x-particles[j].x;
+const dy=particles[i].y-particles[j].y;
+const dist=Math.sqrt(dx*dx+dy*dy);
+if(dist<CONNECT_DIST){
+ctx.beginPath();
+ctx.moveTo(particles[i].x, particles[i].y);
+ctx.lineTo(particles[j].x, particles[j].y);
+ctx.strokeStyle = `rgba(0,212,255,${0.06*(1-dist/CONNECT_DIST)})`;
+ctx.lineWidth = 0.6;
+ctx.stroke();
+}
+}
+}
+requestAnimationFrame(animate);
+}
+animate();
+})();
+// === Toggle password ===
+document.getElementById('togglePw').addEventListener('click', function(){
+const inp = document.getElementById('password');
+inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+// === Form submit ===
+document.getElementById('loginForm').addEventListener('submit', function(e){
+e.preventDefault();
+const btn = this.querySelector('.submit-btn');
+btn.textContent = '正在连接...';
+btn.style.opacity = '0.7';
+btn.style.pointerEvents = 'none';
+setTimeout(()=>{
+btn.textContent = '✓ 已连接';
+btn.style.background = 'linear-gradient(135deg, #00d4ff, #00ff88)';
+setTimeout(()=>{
+btn.textContent = '登 录';
+btn.style.opacity = '';
+btn.style.pointerEvents = '';
+btn.style.background = '';
+}, 2000);
+}, 1500);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>后台管理 · VaultDrive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* === v20260807_205500: Cyberdeck 主题（与 index.html 完全一致） === */
+
+/* === DESIGN TOKENS === */
+:root {
+
+  /* 深底（终端黑 + 极客绿泛光） */
+  --bg: #050807;
+  --bg-deep: #020403;
+  --bg-surface: #0a100c;
+  --bg-card: #0d1510;
+  --bg-card-hover: #121c14;
+  --surface: rgba(0, 255, 156, 0.03);
+  --surface-hover: rgba(0, 255, 156, 0.07);
+  --bg-glass: rgba(5, 8, 7, 0.85);
+
+  /* 极客绿 + 琥珀橙（双主色，禁用紫粉蓝霓虹） */
+  --green: #00ff9c;
+  --green-dim: #00b873;
+  --green-glow: rgba(0, 255, 156, 0.45);
+  --amber: #ffb627;
+  --amber-dim: #b8821a;
+  --amber-glow: rgba(255, 182, 39, 0.4);
+  --red: #ff3860;
+  --red-dim: #b82a47;
+
+  --blue: var(--green);
+  --purple: var(--amber);
+  --pink: var(--amber);
+  --blue-glow: var(--green-glow);
+  --purple-glow: var(--amber-glow);
+  --gradient: linear-gradient(135deg, var(--green), var(--amber));
+
+  --accent-primary: var(--green);
+  --accent-secondary: var(--amber);
+  --accent-green: var(--green);
+  --accent-red: var(--red);
+  --accent-purple: var(--amber);
+  --accent-gold: var(--amber);
+
+  --text-primary: #d4ffe8;
+  --text-secondary: #6fa886;
+  --text-muted: #4a7560;
+  --text: #d4ffe8;
+  --text-dim: #6fa886;
+  --text-dimmer: #3a5a48;
+
+  --border: rgba(0, 255, 156, 0.18);
+  --border-subtle: rgba(0, 255, 156, 0.10);
+  --border-medium: rgba(0, 255, 156, 0.30);
+
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+
+  --font-display: 'JetBrains Mono', monospace;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-body: 'JetBrains Mono', 'Noto Sans SC', monospace;
+
+  --shadow-card: 0 0 0 1px rgba(0, 255, 156, 0.12), 0 2px 0 rgba(0, 255, 156, 0.05);
+  --shadow-hover: 0 0 0 1px var(--green), 0 0 12px var(--green-glow), 0 0 28px rgba(0, 255, 156, 0.18);
+  --shadow-glow: 0 0 24px var(--green-glow);
+  --shadow-glow-purple: 0 0 20px var(--amber-glow);
+
+  --header-h: 56px;
+  --sidebar-w: 240px;
+}
+
+/* === Cyberdeck 全局重置 === */
+* { border-radius: 0 !important; }
+html, body {
+  font-family: var(--font-body) !important;
+  background: var(--bg) !important;
+  color: var(--text-primary) !important;
+  letter-spacing: 0 !important;
+  text-shadow: 0 0 1px rgba(0, 255, 156, 0.15);
+}
+::selection { background: var(--green); color: var(--bg-deep); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); border-left: 1px solid var(--border-subtle); }
+::-webkit-scrollbar-thumb {
+  background: var(--green-dim);
+  border: 1px solid var(--border-subtle);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+
+a { color: var(--green) !important; text-decoration: none !important; text-shadow: 0 0 4px var(--green-glow); }
+a:hover { color: var(--amber) !important; text-shadow: 0 0 4px var(--amber-glow); }
+button, .btn {
+  font-family: var(--font-mono) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+input, select, textarea {
+  font-family: var(--font-mono) !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  border-radius: 0 !important;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: var(--green) !important;
+  box-shadow: 0 0 8px var(--green-glow) !important;
+}
+
+/* === Layout === */
+.app { display: flex; min-height: 100vh; }
+.side {
+  width: var(--sidebar-w);
+  background: var(--bg-surface) !important;
+  border-right: 1px solid var(--border) !important;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono) !important;
+}
+.side-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 14px;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  margin-bottom: 14px;
+}
+.side-logo .ico {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, var(--green), var(--amber));
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  color: #000;
+  font-weight: 700;
+}
+.side-logo .txt {
+  font-family: var(--font-mono) !important;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--green) !important;
+  text-shadow: 0 0 6px var(--green-glow);
+}
+.side-logo .txt::before { content: '> '; color: var(--amber); }
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.nav:hover {
+  background: rgba(0, 255, 156, 0.08) !important;
+  color: var(--green) !important;
+  border-left: 2px solid var(--green) !important;
+  box-shadow: inset 2px 0 8px rgba(0, 255, 156, 0.15);
+}
+.nav.active {
+  background: rgba(0, 255, 156, 0.08) !important;
+  color: var(--green) !important;
+  border-left: 2px solid var(--green) !important;
+  box-shadow: inset 2px 0 8px rgba(0, 255, 156, 0.15);
+}
+.nav.active::before { content: '▶ '; color: var(--amber); }
+.nav .ic { width: 18px; text-align: center; }
+
+.main {
+  flex: 1;
+  padding: 20px 24px;
+  overflow-y: auto;
+  background: transparent !important;
+  font-family: var(--font-mono) !important;
+}
+.hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  border-bottom: 1px dashed var(--border-medium) !important;
+  padding-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.hdr h1 {
+  font-family: var(--font-mono) !important;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--amber) !important;
+  text-shadow: 0 0 6px var(--amber-glow);
+}
+.hdr h1::before { content: '## '; color: var(--green); }
+
+/* === Buttons === */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 0 !important;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  transition: all 0.2s;
+  border: 1px solid var(--border-subtle);
+}
+.btn-p {
+  background: var(--green-dim) !important;
+  color: var(--bg-deep) !important;
+  border: 1px solid var(--green) !important;
+  box-shadow: 0 0 8px var(--green-glow);
+}
+.btn-p:hover { background: var(--green) !important; box-shadow: 0 0 14px var(--green-glow) !important; }
+.btn-g {
+  background: transparent !important;
+  color: var(--green) !important;
+  border: 1px solid var(--border-medium) !important;
+}
+.btn-g:hover { background: rgba(0, 255, 156, 0.1) !important; border-color: var(--green) !important; box-shadow: 0 0 8px var(--green-glow); }
+.btn-r {
+  background: rgba(255, 56, 96, 0.15) !important;
+  color: var(--red) !important;
+  border: 1px solid rgba(255, 56, 96, 0.3) !important;
+}
+.btn-r:hover { background: rgba(255, 56, 96, 0.25) !important; box-shadow: 0 0 8px rgba(255, 56, 96, 0.3); }
+.btn-s { padding: 5px 10px; font-size: 0.7rem; }
+
+/* === Grid cards === */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-top: 2px solid var(--green) !important;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  font-family: var(--font-mono) !important;
+  transition: all 0.15s ease;
+  border-radius: 0 !important;
+  box-shadow: var(--shadow-card) !important;
+}
+.card:hover {
+  border-color: var(--green) !important;
+  background: var(--bg-card-hover) !important;
+  box-shadow: var(--shadow-hover) !important;
+  transform: translateY(-2px);
+}
+.card:nth-child(2) { border-top-color: var(--amber) !important; }
+.card:nth-child(3) { border-top-color: var(--blue) !important; }
+.card:nth-child(4) { border-top-color: var(--red) !important; }
+.card .lbl {
+  font-size: 0.7rem;
+  color: var(--text-dim) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+.card .val {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--font-mono) !important;
+  color: var(--green) !important;
+  text-shadow: 0 0 6px var(--green-glow);
+}
+.card:nth-child(2) .val { color: var(--amber) !important; text-shadow: 0 0 6px var(--amber-glow); }
+.card:nth-child(3) .val { color: var(--blue) !important; }
+.card:nth-child(4) .val { color: var(--red) !important; }
+
+/* === Section cards === */
+.section-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  padding: 16px;
+  margin-bottom: 14px;
+  border-left: 3px solid var(--green-dim) !important;
+  font-family: var(--font-mono) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--shadow-card) !important;
+  position: relative;
+  overflow: hidden;
+}
+.section-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px; height: 100%;
+  background: linear-gradient(180deg, transparent, var(--green) 50%, transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.section-card:hover { border-color: var(--green) !important; border-left-color: var(--green) !important; background: var(--bg-card-hover) !important; }
+.section-card:hover::before { opacity: 1; }
+.section-card h3 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--green) !important;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.section-card h3::before { content: '$ '; color: var(--amber); font-weight: 700; }
+
+/* === Tabs（替换方案 — 改为大写等宽） === */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 16px;
+  background: var(--bg-card) !important;
+  border-radius: 0 !important;
+  padding: 3px;
+  border: 1px solid var(--border-subtle);
+}
+.tab {
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  color: var(--text-secondary) !important;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: var(--font-mono) !important;
+  border: 1px solid transparent;
+}
+.tab:hover { color: var(--text-primary) !important; border-color: var(--border-subtle); }
+.tab.active {
+  background: var(--green) !important;
+  color: var(--bg-deep) !important;
+  font-weight: 700;
+  border-color: var(--green) !important;
+  text-shadow: none;
+}
+
+/* === Table === */
+.tbl-wrap {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-card) !important;
+}
+.tbl-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  background: var(--bg-surface) !important;
+}
+.tbl-hdr h3 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--green) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+table { width: 100%; border-collapse: collapse; }
+th, td {
+  padding: 10px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  font-size: 0.8rem;
+}
+th {
+  background: var(--bg-surface) !important;
+  color: var(--amber) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-medium) !important;
+}
+tr { transition: background 0.15s; }
+tr:hover { background: rgba(0, 255, 156, 0.05) !important; }
+
+/* === Badges === */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid currentColor;
+  border-radius: 0 !important;
+}
+.badge-g { background: rgba(0, 255, 156, 0.15) !important; color: var(--green) !important; }
+.badge-y { background: rgba(255, 182, 39, 0.15) !important; color: var(--amber) !important; }
+.badge-r { background: rgba(255, 56, 96, 0.15) !important; color: var(--red) !important; }
+.badge-b { background: rgba(0, 255, 156, 0.15) !important; color: var(--blue) !important; }
+
+/* === Forms === */
+.fg { margin-bottom: 12px; }
+.fl {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-dim) !important;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: var(--font-mono) !important;
+}
+.fi {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 0 !important;
+  font-size: 0.8rem;
+  font-family: var(--font-mono) !important;
+  color: var(--text-primary) !important;
+}
+.fi:focus {
+  outline: none !important;
+  border-color: var(--green) !important;
+  box-shadow: 0 0 8px var(--green-glow) !important;
+}
+
+/* === Modal === */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal.show { opacity: 1; pointer-events: auto; }
+.modal-c {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--green) !important;
+  border-radius: 0 !important;
+  padding: 20px;
+  width: 90%;
+  max-width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 0 0 1px var(--green-glow), 0 0 40px rgba(0, 255, 156, 0.2), 0 24px 60px rgba(0, 0, 0, 0.7) !important;
+  font-family: var(--font-mono) !important;
+}
+
+/* === Toast === */
+.toast {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.toast div {
+  padding: 10px 16px;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--green) !important;
+  border-radius: 0 !important;
+  font-size: 0.8rem;
+  box-shadow: 0 0 16px var(--green-glow) !important;
+  font-family: var(--font-mono) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-primary) !important;
+  animation: slideIn 0.3s ease;
+}
+.toast div::before { content: '> '; color: var(--amber); }
+.toast .s { border-color: var(--green) !important; color: var(--green) !important; }
+.toast .e { border-color: var(--red) !important; color: var(--red) !important; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* === Log viewer === */
+.log-viewer {
+  padding: 12px;
+  max-height: 500px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  background: var(--bg-deep) !important;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0 !important;
+}
+.log-line {
+  margin-bottom: 3px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.log-time { color: var(--text-muted); }
+.log-info { color: var(--green); }
+.log-warn { color: var(--amber); }
+.log-error { color: var(--red); }
+
+/* === 内嵌小卡片（仪表盘里的系统状态行） === */
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-deep) !important;
+  border-radius: 0 !important;
+  border: 1px solid var(--border-subtle);
+}
+
+@media (max-width: 768px) {
+  .side { display: none; }
+  .main { padding: 12px; }
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="side">
+    <div class="side-logo"><div class="ico">⚡</div><div class="txt">VAULTDRIVE</div></div>
+    <div class="nav active" onclick="showSec('dashboard')"><span class="ic">📊</span> 仪表盘</div>
+    <div class="nav" onclick="showSec('resources')"><span class="ic">📁</span> 资源管理</div>
+    <div class="nav" onclick="showSec('users')"><span class="ic">👥</span> 用户管理</div>
+    <div class="nav" onclick="showSec('import')"><span class="ic">📥</span> 导入队列</div>
+    <div class="nav" onclick="showSec('filters')"><span class="ic">🚫</span> 过滤词</div>
+    <div class="nav" onclick="showSec('deadlinks')"><span class="ic">🔗</span> 死链检测</div>
+    <div class="nav" onclick="showSec('tmdb')"><span class="ic">🎬</span> TMDB爬虫</div>
+    <div class="nav" onclick="showSec('apis')"><span class="ic">🔌</span> API测试</div>
+    <div class="nav" onclick="showSec('settings')"><span class="ic">⚙</span> 系统设置</div>
+    <div class="nav" onclick="showSec('logs')"><span class="ic">📋</span> 系统日志</div>
+    <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border-subtle)">
+      <div class="nav" onclick="window.location.href='/'"><span class="ic">🏠</span> 返回首页</div>
+      <div class="nav" onclick="window.location.href='/logout'"><span class="ic">🚪</span> 退出</div>
+    </div>
+  </div>
+  <div class="main">
+    <!-- 仪表盘 -->
+    <div id="sec-dashboard">
+      <div class="hdr"><h1>仪表盘</h1><button class="btn btn-g btn-s" onclick="loadDashboard()">↻ 刷新</button></div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="lbl">总资源数</div>
+          <div class="val" id="sTotal">-</div>
+        </div>
+        <div class="card">
+          <div class="lbl">今日搜索</div>
+          <div class="val" id="sSearches">-</div>
+        </div>
+        <div class="card">
+          <div class="lbl">活跃引擎</div>
+          <div class="val" id="sEngines">-</div>
+        </div>
+        <div class="card">
+          <div class="lbl">待处理队列</div>
+          <div class="val" id="sQueue">-</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+        <div class="section-card">
+          <h3>🚀 快速操作</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button onclick="showSec('resources')" class="btn btn-g" style="justify-content:center">📁 资源管理</button>
+            <button onclick="showSec('users')" class="btn btn-g" style="justify-content:center">👥 用户管理</button>
+            <button onclick="showSec('filters')" class="btn btn-g" style="justify-content:center">🚫 过滤词</button>
+            <button onclick="showSec('apis')" class="btn btn-g" style="justify-content:center">🔌 API测试</button>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h3>⚡ 系统状态</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="status-row">
+              <span style="color:var(--text-dim);font-size:.8rem">● 数据库</span>
+              <span style="color:var(--green);font-size:.75rem;text-shadow:0 0 6px var(--green-glow)">正常运行</span>
+            </div>
+            <div class="status-row">
+              <span style="color:var(--text-dim);font-size:.8rem">● API服务</span>
+              <span style="color:var(--green);font-size:.75rem;text-shadow:0 0 6px var(--green-glow)">正常运行</span>
+            </div>
+            <div class="status-row">
+              <span style="color:var(--text-dim);font-size:.8rem">● TMDB爬虫</span>
+              <span style="color:var(--green);font-size:.75rem;text-shadow:0 0 6px var(--green-glow)">正常运行</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="margin-bottom:0">📝 最近日志</h3>
+          <button onclick="showSec('logs')" class="btn btn-g btn-s">查看全部</button>
+        </div>
+        <div id="recentLogs" style="color:var(--text-muted);font-size:.8rem">加载中...</div>
+      </div>
+    </div>
+
+    <!-- 资源管理 -->
+    <div id="sec-resources" style="display:none">
+      <div class="hdr"><h1>资源管理</h1></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>ID</th><th>标题</th><th>来源</th><th>类型</th><th>年份</th></tr></thead>
+        <tbody id="resTbl"><tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px">加载中...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- 用户管理 -->
+    <div id="sec-users" style="display:none">
+      <div class="hdr"><h1>用户管理</h1><button class="btn btn-p btn-s" onclick="showModal('addUserModal')">+ 添加用户</button></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>最后登录</th><th>操作</th></tr></thead>
+        <tbody id="userTbl"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">加载中...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- 导入队列 -->
+    <div id="sec-import" style="display:none">
+      <div class="hdr"><h1>导入队列</h1>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-g btn-s" onclick="loadImportQueue()">↻ 刷新</button>
+          <button class="btn btn-p btn-s" onclick="processQueue()">处理队列</button>
+          <button class="btn btn-r btn-s" onclick="clearQueue()">清空</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>ID</th><th>关键词</th><th>状态</th><th>结果数</th><th>创建时间</th><th>操作</th></tr></thead>
+        <tbody id="importTbl"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">加载中...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- 过滤词 -->
+    <div id="sec-filters" style="display:none">
+      <div class="hdr"><h1>过滤词管理</h1>
+        <div style="display:flex;gap:6px">
+          <input class="fi" id="newFilter" placeholder="添加过滤词" style="width:200px">
+          <button class="btn btn-p btn-s" onclick="addFilter()">添加</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>ID</th><th>关键词</th><th>操作</th></tr></thead>
+        <tbody id="filterTbl"><tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:30px">加载中...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- 死链检测 -->
+    <div id="sec-deadlinks" style="display:none">
+      <div class="hdr"><h1>死链检测</h1>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-p btn-s" onclick="scanDeadlinks()">开始扫描</button>
+          <button class="btn btn-r btn-s" onclick="deleteDeadlinks()">删除死链</button>
+        </div>
+      </div>
+      <div class="tbl-wrap" style="padding:16px">
+        <div id="deadlinkDetail" style="font-size:.85rem">加载中...</div>
+      </div>
+    </div>
+
+    <!-- TMDB爬虫 -->
+    <div id="sec-tmdb" style="display:none">
+      <div class="hdr"><h1>TMDB 爬虫</h1>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-p btn-s" onclick="startTmdbCrawl()">启动爬虫</button>
+          <button class="btn btn-g btn-s" onclick="checkTmdbStatus()">检查状态</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-hdr"><h3>状态</h3><span id="tmdbStatus">-</span></div>
+      </div>
+    </div>
+
+    <!-- API测试 -->
+    <div id="sec-apis" style="display:none">
+      <div class="hdr"><h1>API 测试</h1><button class="btn btn-p btn-s" onclick="testApis()">测试所有API</button></div>
+      <div class="tbl-wrap" style="padding:16px">
+        <div id="apiDetail" style="color:var(--text-muted)">点击按钮开始测试</div>
+      </div>
+    </div>
+
+    <!-- 系统设置 -->
+    <div id="sec-settings" style="display:none">
+      <div class="hdr"><h1>系统设置</h1><button class="btn btn-p btn-s" onclick="saveSettings()">保存</button></div>
+      <div class="tbl-wrap" style="padding:16px">
+        <div class="fg"><label class="fl">站点名称</label><input class="fi" id="setSiteName" placeholder="VaultDrive"></div>
+        <div class="fg"><label class="fl">TMDB API Key</label><input class="fi" id="setTmdbKey" placeholder="TMDB API Key"></div>
+        <div class="fg"><label class="fl">管理员密码</label><input class="fi" id="setAdminPass" type="password" placeholder="留空不修改"></div>
+      </div>
+    </div>
+
+    <!-- 系统日志 -->
+    <div id="sec-logs" style="display:none">
+      <div class="hdr"><h1>系统日志</h1>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-g btn-s" onclick="loadLogs()">↻ 刷新</button>
+          <button class="btn btn-r btn-s" onclick="clearLogs()">清空</button>
+        </div>
+      </div>
+      <div class="tbl-wrap"><div class="log-viewer" id="logViewer">加载中...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 添加用户弹窗 -->
+<div class="modal" id="addUserModal">
+  <div class="modal-c">
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+      <h3 style="font-family:var(--font-mono);color:var(--amber);text-transform:uppercase;letter-spacing:.1em">&gt; 添加用户</h3>
+      <button onclick="hideModal('addUserModal')" class="btn btn-g btn-s">✕</button>
+    </div>
+    <div class="fg"><label class="fl">用户名</label><input class="fi" id="newUser" placeholder="用户名"></div>
+    <div class="fg"><label class="fl">密码</label><input class="fi" id="newPass" type="password" placeholder="密码"></div>
+    <div class="fg"><label class="fl">角色</label>
+      <select class="fi" id="newRole"><option value="user">普通用户</option><option value="admin">管理员</option></select>
+    </div>
+    <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-g btn-s" onclick="hideModal('addUserModal')">取消</button>
+      <button class="btn btn-p btn-s" onclick="addUser()">添加</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+async function api(u,m='GET',d=null){
+  const csrf=await(await fetch('/api/csrf-token')).json();
+  const o={method:m,headers:{'Content-Type':'application/json','X-CSRF-Token':csrf.csrf_token||''}};
+  if(d)o.body=JSON.stringify(d);
+  const r=await fetch(u,o);
+  if(r.status===401){window.location.href='/';return null}
+  return r.json();
+}
+function show(t='',c='s'){const el=document.getElementById('toast');const d=document.createElement('div');d.className=c;d.textContent=t;el.appendChild(d);setTimeout(()=>d.remove(),3000)}
+function showModal(id){document.getElementById(id)?.classList.add('show')}
+function hideModal(id){document.getElementById(id)?.classList.remove('show')}
+
+function showSec(id){
+  document.querySelectorAll('[id^="sec-"]').forEach(s=>s.style.display='none');
+  document.querySelectorAll('.nav').forEach(n=>n.classList.remove('active'));
+  const s=document.getElementById('sec-'+id);
+  if(s)s.style.display='block';
+  event?.target?.closest('.nav')?.classList.add('active');
+  if(id==='dashboard')loadDashboard();
+  if(id==='resources')loadResources('all');
+  if(id==='users')loadUsers();
+  if(id==='import')loadImportQueue();
+  if(id==='filters')loadFilters();
+  if(id==='deadlinks')loadDeadlinks();
+  if(id==='logs')loadLogs();
+  if(id==='settings')loadSettings();
+}
+
+async function loadDashboard(){
+  try{
+    const [stats, dash, queue] = await Promise.all([
+      api('/api/stats'),
+      api('/api/admin/stats/dashboard'),
+      api('/api/admin/import_queue')
+    ]);
+    const overview = dash?.overview || {};
+    document.getElementById('sTotal').textContent=(stats?.total||overview.resources||0).toLocaleString();
+    const dailySearches = dash?.daily_searches || [];
+    const todaySearches = dailySearches.length ? dailySearches[dailySearches.length-1].count : (overview.search_logs||0);
+    document.getElementById('sSearches').textContent=todaySearches;
+    document.getElementById('sEngines').textContent='6/6';
+    document.getElementById('sQueue').textContent=(queue?.items||[]).length;
+    loadRecentLogs();
+  }catch(e){console.error('Dashboard error:',e)}
+}
+
+async function loadRecentLogs(){
+  try{
+    const d = await api('/api/admin/logs?per_page=5');
+    const logs = d?.items || [];
+    const el = document.getElementById('recentLogs');
+    if(!logs.length){
+      el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-muted)">暂无日志</div>';
+      return;
+    }
+    el.innerHTML=logs.map(l=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-subtle)">
+        <span style="color:var(--green);font-size:.7rem">${(l.created_at||'').substring(5,16)}</span>
+        <span style="color:var(--text-primary);font-size:.8rem">${l.username||'-'}</span>
+        <span style="color:var(--text-dim);font-size:.75rem">${l.action||''}</span>
+        <span style="color:var(--text-muted);font-size:.72rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.detail||''}</span>
+      </div>
+    `).join('');
+  }catch(e){console.error('Logs error:',e)}
+}
+
+async function loadResources(type,el){
+  if(el){document.querySelectorAll('#sec-resources .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active')}
+  const d=await api('/api/resources?page=1&per_page=20'+(type!=='all'?'&type='+type:''));
+  if(!d)return;
+  const items=d.items||d.resources||[];
+  document.getElementById('resTbl').innerHTML=items.length?items.map(r=>{
+    const title=(r.title||r.note||'').substring(0,35);
+    const src=r.source||'-';
+    const srcColor={quark:'var(--amber)',aliyun:'var(--blue)',baidu:'var(--green)',xunlei:'var(--red)',tianyi:'var(--amber-dim)',uc:'var(--blue)'};
+    return `<tr>
+      <td style="color:var(--text-muted);font-size:.72rem">${r.id||'-'}</td>
+      <td>${title}</td>
+      <td><span class="badge ${src==='quark'?'badge-y':src==='aliyun'||src==='uc'?'badge-b':src==='baidu'||src==='tianyi'?'badge-g':'badge-r'}">${src}</span></td>
+      <td>${r.type||'-'}</td>
+      <td style="color:var(--text-muted);font-size:.72rem">${r.year||''}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px">暂无数据</td></tr>';
+}
+
+async function loadUsers(){
+  const d=await api('/api/users');
+  if(!d)return;
+  const users=d.items||d.users||d||[];
+  document.getElementById('userTbl').innerHTML=users.length?users.map(u=>`<tr>
+    <td>${u.id}</td>
+    <td><strong>${u.username}</strong></td>
+    <td><span class="badge ${u.role==='admin'?'badge-y':'badge-b'}">${u.role==='admin'?'管理员':'用户'}</span></td>
+    <td><span class="badge ${u.status===1?'badge-g':'badge-r'}">${u.status===1?'正常':'禁用'}</span></td>
+    <td style="color:var(--text-muted);font-size:.72rem">${(u.last_login||'').substring(0,16)}</td>
+    <td><button class="btn btn-g btn-s" onclick="toggleUser(${u.id},${u.status})">${u.status===1?'禁用':'启用'}</button></td>
+  </tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">暂无用户</td></tr>';
+}
+
+async function addUser(){
+  const u=document.getElementById('newUser').value,p=document.getElementById('newPass').value,r=document.getElementById('newRole').value;
+  if(!u||!p){show('请填写完整','e');return}
+  const d=await api('/api/users','POST',{username:u,password:p,role:r});
+  if(d.ok||d.id||d.success){show('添加成功');hideModal('addUserModal');loadUsers()}else show(d.error||'失败','e');
+}
+
+async function toggleUser(uid,status){
+  const d=await api('/api/users/'+uid,'POST',{status:status===1?0:1});
+  if(d.ok||d.success){show('操作成功');loadUsers()}else show(d.error||'失败','e');
+}
+
+async function loadImportQueue(){
+  const d=await api('/api/admin/import_queue');
+  if(!d)return;
+  const items=d.items||d.queue||d||[];
+  document.getElementById('importTbl').innerHTML=items.length?items.map(q=>{
+    const status=q.status||'pending';
+    const statusMap={done:'badge-g',pending:'badge-y',processing:'badge-b',failed:'badge-r'};
+    const statusLabel={done:'完成',pending:'等待',processing:'处理中',failed:'失败'};
+    return `<tr>
+      <td>${q.id}</td>
+      <td><strong>${q.keyword||q.query||''}</strong></td>
+      <td><span class="badge ${statusMap[status]||'badge-b'}">${statusLabel[status]||status}</span></td>
+      <td style="font-size:.72rem">${q.result_count||0}条</td>
+      <td style="color:var(--text-muted);font-size:.72rem">${(q.created_at||'').substring(0,16)}</td>
+      <td><button class="btn btn-r btn-s" onclick="deleteImport(${q.id})">删除</button></td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">队列为空</td></tr>';
+}
+
+async function processQueue(){const d=await api('/api/admin/process_queue','POST');show(d.ok?'开始处理':'处理失败',d.ok?'s':'e');loadImportQueue()}
+async function clearQueue(){const d=await api('/api/admin/import_queue/clear','POST');show(d.ok?'已清空':'失败',d.ok?'s':'e');loadImportQueue()}
+async function deleteImport(id){const d=await api('/api/admin/import_queue/'+id,'DELETE');if(d.ok){show('已删除');loadImportQueue()}}
+
+async function loadFilters(){
+  const d=await api('/api/admin/filter_words');
+  if(!d)return;
+  const items=d.items||d.filters||d||[];
+  document.getElementById('filterTbl').innerHTML=items.map(f=>`<tr><td>${f.id}</td><td style="color:var(--red)">${f.word||f.keyword||''}</td><td><button class="btn btn-r btn-s" onclick="deleteFilter(${f.id})">删除</button></td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:30px">暂无</td></tr>';
+}
+
+async function addFilter(){
+  const w=document.getElementById('newFilter').value.trim();
+  if(!w)return;
+  const d=await api('/api/admin/filter_words','POST',{word:w});
+  if(d.ok||d.id||d.success){show('已添加');document.getElementById('newFilter').value='';loadFilters()}else show(d.error||'失败','e');
+}
+
+async function deleteFilter(id){const d=await api('/api/admin/filter_words/'+id,'DELETE');if(d.ok){show('已删除');loadFilters()}}
+
+async function loadDeadlinks(){
+  const d=await api('/api/admin/deadlinks/unchecked_count');
+  if(!d)return;
+  const items=d.items||[];
+  const total=d.total||0;
+  let html=`<div style="margin-bottom:12px">未检测总数: <strong style="color:var(--amber);text-shadow:0 0 6px var(--amber-glow)">${total.toLocaleString()}</strong></div>`;
+  html+=items.map(i=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-subtle)">
+    <span>${i.source||''}</span>
+    <span style="color:var(--amber)">${(i.c||0).toLocaleString()}</span>
+  </div>`).join('');
+  document.getElementById('deadlinkDetail').innerHTML=html;
+}
+async function scanDeadlinks(){show('开始扫描...');const d=await api('/api/admin/deadlinks/scan','POST');show(d.ok?'扫描完成':'扫描失败',d.ok?'s':'e')}
+async function deleteDeadlinks(){const d=await api('/api/admin/deadlinks/delete','POST');show(d.ok?'已删除死链':'失败',d.ok?'s':'e')}
+
+async function startTmdbCrawl(){show('启动TMDB爬虫...');const d=await api('/api/admin/tmdb/crawl','POST');show(d.ok?'爬虫已启动':'启动失败',d.ok?'s':'e')}
+async function checkTmdbStatus(){const d=await api('/api/admin/tmdb/status');if(d)document.getElementById('tmdbStatus').textContent=JSON.stringify(d)}
+
+async function testApis(){
+  show('正在测试...');
+  const d=await api('/api/admin/test_apis');
+  if(!d)return;
+  const results=d.results||[];
+  const totalOk=d.total_ok||0;
+  const totalErr=d.total_error||0;
+  const dbLatency=d.db_latency_ms||0;
+  let html=`<div style="margin-bottom:12px;display:flex;gap:12px">
+    <span class="badge badge-g">正常: ${totalOk}</span>
+    <span class="badge badge-r">异常: ${totalErr}</span>
+    <span class="badge badge-b">数据库: ${dbLatency}ms</span>
+  </div>`;
+  html+=results.map(a=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle)">
+    <span class="badge ${a.status==='ok'?'badge-g':'badge-r'}">${a.status==='ok'?'✓':'✗'}</span>
+    <span style="flex:1">${a.method||''} ${a.path||''}</span>
+    <span style="color:var(--text-muted);font-size:.72rem">${a.ms||'-'}ms</span>
+  </div>`).join('');
+  document.getElementById('apiDetail').innerHTML=html;
+  show('测试完成');
+}
+
+async function loadSettings(){
+  try{
+    const d=await api('/api/admin/settings');
+    const items=d.items||d.settings||[];
+    items.forEach(s=>{
+      if(s.key==='site_name')document.getElementById('setSiteName').value=s.value||'';
+      if(s.key==='tmdb_api_key')document.getElementById('setTmdbKey').value=s.value||'';
+    });
+  }catch(e){}
+}
+
+async function saveSettings(){
+  const settings=[
+    {key:'site_name',value:document.getElementById('setSiteName').value},
+    {key:'tmdb_api_key',value:document.getElementById('setTmdbKey').value}
+  ];
+  const pass=document.getElementById('setAdminPass').value;
+  const d=await api('/api/admin/settings','POST',{settings,admin_pass:pass});
+  show(d.ok||d.success?'保存成功':'保存失败',d.ok||d.success?'s':'e');
+}
+
+async function loadLogs(){
+  const d=await api('/api/admin/logs');
+  if(!d)return;
+  const logs=d.items||d.logs||d||[];
+  const actionLabels={
+    'filter_add':'添加过滤词','filter_delete':'删除过滤词',
+    'user_add':'添加用户','user_status':'更新用户状态','user_update':'更新用户',
+    'settings_save':'保存设置','queue_process':'处理队列','queue_clear':'清空队列',
+    'deadlink_scan':'死链扫描','deadlink_delete':'删除死链','tmdb_crawl':'TMDB爬虫',
+    'logs_clear':'清空日志','import':'导入资源','search_blocked':'搜索拦截'
+  };
+  document.getElementById('logViewer').innerHTML=logs.length?logs.map(l=>{
+    const action=l.action||'';
+    const label=actionLabels[action]||action;
+    const detail=l.detail||'';
+    const time=(l.created_at||'').substring(0,19);
+    const user=l.username||'系统';
+    return `<div class="log-line">
+      <span style="color:var(--text-muted);white-space:nowrap">${time}</span>
+      <span class="badge badge-b" style="min-width:60px;text-align:center">${user}</span>
+      <span style="color:var(--amber);min-width:80px">${label}</span>
+      <span style="color:var(--text-secondary);flex:1">${detail}</span>
+    </div>`;
+  }).join(''):'<div style="text-align:center;padding:40px;color:var(--text-muted)">暂无操作日志</div>';
+}
+
+async function clearLogs(){const d=await api('/api/admin/logs/clear','POST');show(d.ok?'已清空':'失败',d.ok?'s':'e');loadLogs()}
+
+loadDashboard();
+</script>
+</body>
+</html>

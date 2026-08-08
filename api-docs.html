@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>API 文档 - 资源雷达</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#032541;color:#e4e4e7;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:2rem}
+h1{text-align:center;margin-bottom:2rem;font-size:1.5rem}
+.api-list{max-width:900px;margin:0 auto}
+.api-card{background:#0a1628;border:1px solid #1a3a5c;border-radius:10px;padding:1rem;margin-bottom:0.6rem;display:flex;align-items:center;gap:1rem;transition:border-color 0.2s}
+.api-card:hover{border-color:#01b4e4}
+.method{font-size:0.72rem;font-weight:700;padding:0.25rem 0.6rem;border-radius:4px;min-width:50px;text-align:center}
+.method.get{background:rgba(16,185,129,0.15);color:#10b981}
+.method.post{background:rgba(99,102,241,0.15);color:#01b4e4}
+.method.delete{background:rgba(239,68,68,0.15);color:#ef4444}
+.path{font-family:monospace;font-size:0.88rem;color:#e4e4e7}
+.doc{font-size:0.78rem;color:#999;margin-left:auto;text-align:right;max-width:300px}
+.auth-badge{font-size:0.65rem;background:rgba(239,68,68,0.15);color:#ef4444;padding:0.15rem 0.4rem;border-radius:4px}
+.filter-bar{max-width:900px;margin:0 auto 1.5rem;display:flex;gap:0.5rem;flex-wrap:wrap}
+.filter-btn{padding:0.35rem 0.8rem;border-radius:20px;border:1px solid #1a3a5c;background:transparent;color:#a1a1aa;cursor:pointer;font-size:0.78rem;transition:all 0.2s}
+.filter-btn.active{background:#01b4e4;border-color:#01b4e4;color:white}
+.filter-btn:hover{border-color:#01b4e4}
+.stats{max-width:900px;margin:0 auto 1rem;font-size:0.82rem;color:#999;text-align:center}
+</style>
+<script src="/site-settings.js"></script>
+</head>
+<body>
+<h1>📖 API 文档</h1>
+<div class="stats" id="stats"></div>
+<div class="filter-bar" id="filters"></div>
+<div class="api-list" id="apiList"><div style="text-align:center;padding:2rem;color:#999">加载中...</div></div>
+<script>
+var _allDocs=[];
+async function loadDocs(){
+  try{
+    var r=await fetch('/api/docs');if(!r.ok)throw 0;
+    var d=await r.json();
+    _allDocs=d.docs||[];
+    document.getElementById('stats').textContent='共 '+d.total+' 个 API 端点';
+    renderFilters();
+    renderDocs(_allDocs);
+  }catch(e){document.getElementById('apiList').innerHTML='<div style="color:#ef4444;text-align:center">加载失败</div>'}
+}
+function renderFilters(){
+  var methods={};_allDocs.forEach(function(d){d.methods.forEach(function(m){methods[m]=1})});
+  var el=document.getElementById('filters');
+  el.innerHTML='<button class="filter-btn active" onclick="filterDocs(this,\\'all\\')">全部</button>';
+  Object.keys(methods).sort().forEach(function(m){
+    el.innerHTML+='<button class="filter-btn" onclick="filterDocs(this,\\''+m+'\\')">'+m+'</button>';
+  });
+}
+function filterDocs(btn,method){
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+  if(method==='all')renderDocs(_allDocs);
+  else renderDocs(_allDocs.filter(function(d){return d.methods.indexOf(method)>=0}));
+}
+function renderDocs(docs){
+  var el=document.getElementById('apiList');
+  if(!docs.length){el.innerHTML='<div style="text-align:center;color:#999">无匹配 API</div>';return;}
+  el.innerHTML=docs.map(function(d){
+    return d.methods.map(function(m){
+      var mc=m.toLowerCase();
+      return '<div class="api-card">'+
+        '<span class="method '+mc+'">'+m+'</span>'+
+        '<span class="path">'+d.path+'</span>'+
+        (d.auth?'<span class="auth-badge">🔒 需认证</span>':'')+
+        '<span class="doc">'+(d.doc||d.name)+'</span>'+
+      '</div>';
+    }).join('');
+  }).join('');
+}
+loadDocs();
+</script>
+</body>
+</html>

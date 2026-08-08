@@ -1,0 +1,42 @@
+services:
+  resource-web:
+    build: .
+    container_name: resource_web_v2
+    ports:
+      - "5001:5000"
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Shanghai
+    networks:
+      - resource_web_resource-net
+    depends_on:
+      - redis2
+
+  redis2:
+    image: redis:7-alpine
+    container_name: resource_web_v2_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis2_v2_data:/data
+    networks:
+      - resource_web_resource-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  resource_web_resource-net:
+    external: true
+
+volumes:
+  redis2_v2_data:
