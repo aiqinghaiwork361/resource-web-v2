@@ -1459,7 +1459,7 @@ def api_users():
         total = cur.fetchone()["total"]
 
         cur.execute(
-            """SELECT id, username, email, role, status, last_login, created_at, updated_at
+            """SELECT id, username, email, role, status, last_login, created_at, updated_at, github_id
             FROM users ORDER BY id ASC LIMIT %s OFFSET %s""",
             (per_page, offset),
         )
@@ -1549,6 +1549,31 @@ def api_user_add():
         return jsonify({"ok": True, "id": cur.lastrowid})
     except pymysql.err.IntegrityError:
         return jsonify({"error": f'用户名 "{username}" 已存在'}), 409
+    finally:
+        db.close()
+
+
+@app.route("/api/users/<int:uid>/github", methods=["POST"])
+@admin_required
+def api_user_bind_github(uid):
+    """管理员绑定/解绑 GitHub：传 {"github_id": "..."} 或 {"github_id": null}"""
+    data = request.get_json() or {}
+    github_id = data.get("github_id")
+    db = get_db()
+    try:
+        cur = db.cursor()
+        if github_id:
+            cur.execute(
+                "UPDATE users SET github_id=%s WHERE id=%s",
+                (str(github_id), uid),
+            )
+        else:
+            cur.execute(
+                "UPDATE users SET github_id=NULL WHERE id=%s",
+                (uid,),
+            )
+        db.commit()
+        return jsonify({"ok": True})
     finally:
         db.close()
 

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的收藏 - 资源雷达</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+<style>
+  :root {
+    --bg: #050807;
+    --bg-surface: #0a100c;
+    --bg-card: #0d1510;
+    --bg-card-hover: #121c14;
+    --text: #d4ffe8;
+    --text-secondary: #6fa886;
+    --text-muted: #4a7560;
+    --cyan: #00d2ff;
+    --magenta: #ff2d95;
+    --r: 10px;
+    --shadow-card: 0 0 0 1px rgba(0, 255, 156, 0.12), 0 2px 0 rgba(0, 255, 156, 0.05);
+  }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(5,8,7,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,255,156,0.08);
+    padding: 0 24px; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
+  .logo-icon { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,var(--cyan),var(--magenta)); display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .logo-text { font-weight:700; font-size:1rem; letter-spacing:0.02em; }
+  .header-actions { display:flex; align-items:center; gap:12px; }
+  .btn {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04); color: var(--text); font-size: 0.85rem;
+    cursor: pointer; text-decoration: none; transition: all 0.2s;
+  }
+  .btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
+  .btn-primary { background: linear-gradient(135deg, var(--cyan), #0189a8); border-color: transparent; color: white; font-weight: 600; }
+  .btn-primary:hover { opacity: 0.9; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+  .page-subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 24px; }
+  .empty-state {
+    text-align: center; padding: 80px 20px; color: var(--text-muted);
+  }
+  .empty-state-icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.5; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--bg-card); border-radius: var(--r); overflow: hidden;
+    box-shadow: var(--shadow-card); transition: all 0.25s; cursor: pointer;
+    border: 1px solid rgba(0,255,156,0.06);
+  }
+  .card:hover { transform: translateY(-4px); background: var(--bg-card-hover); box-shadow: 0 0 0 1px rgba(0,255,156,0.2), 0 8px 30px rgba(0,0,0,0.4); }
+  .card-poster { width: 100%; aspect-ratio: 2/3; background: var(--bg-surface); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .card-poster img { width: 100%; height: 100%; object-fit: cover; }
+  .card-poster-placeholder { color: var(--text-muted); font-size: 2.5rem; }
+  .card-body { padding: 12px; }
+  .card-title { font-size: 0.9rem; font-weight: 600; color: var(--text); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 6px; }
+  .card-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+  .card-tag { font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; background: rgba(0,255,156,0.08); color: var(--text-secondary); border: 1px solid rgba(0,255,156,0.12); }
+  .card-rating { font-size: 0.8rem; color: #ffd866; font-weight: 600; }
+  .card-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .card-actions .btn { flex: 1; text-align: center; font-size: 0.78rem; padding: 5px 8px; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    padding: 10px 20px; border-radius: 8px; background: rgba(0,0,0,0.9); color: white;
+    font-size: 0.9rem; z-index: 1000; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .toast.show { opacity: 1; }
+  .loading { text-align: center; padding: 60px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<header>
+  <a href="/" class="logo">
+    <div class="logo-icon">🎬</div>
+    <div class="logo-text">资源雷达</div>
+  </a>
+  <div class="header-actions">
+    <a href="/" class="btn">返回首页</a>
+    <button class="btn" onclick="doLogout()">退出</button>
+  </div>
+</header>
+
+<div class="container">
+  <h1 class="page-title">我的收藏</h1>
+  <p class="page-subtitle" id="userInfo">加载中...</p>
+  <div id="content">
+    <div class="loading">加载中...</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+async function init() {
+  await loadUserInfo();
+  await loadFavorites();
+}
+
+async function loadUserInfo() {
+  try {
+    const r = await fetch('/api/user/me');
+    const d = await r.json();
+    const el = document.getElementById('userInfo');
+    if (d.logged_in) {
+      el.textContent = `${d.username} 的收藏夹`;
+    } else {
+      el.textContent = '未登录';
+      window.location.href = '/login';
+    }
+  } catch(e) {
+    window.location.href = '/login';
+  }
+}
+
+async function loadFavorites() {
+  const container = document.getElementById('content');
+  try {
+    const r = await fetch('/api/favorites');
+    if (r.status === 401) { window.location.href = '/login'; return; }
+    const d = await r.json();
+    const items = d.items || [];
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <div>还没有收藏任何资源</div>
+          <div style="margin-top:8px;font-size:0.85rem">浏览首页，点击资源卡片上的收藏按钮添加</div>
+          <a href="/" class="btn btn-primary" style="margin-top:20px;display:inline-block">去逛逛</a>
+        </div>`;
+      return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'card-grid';
+    for (const item of items) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      const posterHtml = item.images ? `<img src="${item.images.split(',')[0]}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'card-poster-placeholder\\'>🎬</div>'">` : `<div class="card-poster-placeholder">🎬</div>`;
+      const tags = [];
+      if (item.type) tags.push(item.type);
+      if (item.quality) tags.push(item.quality);
+      if (item.year) tags.push(item.year);
+      const tagHtml = tags.map(t => `<span class="card-tag">${t}</span>`).join('');
+      card.innerHTML = `
+        <div class="card-poster">${posterHtml}</div>
+        <div class="card-body">
+          <div class="card-title">${item.title || '无标题'}</div>
+          <div class="card-meta">
+            ${tagHtml}
+            ${item.rating ? `<span class="card-rating">★ ${item.rating}</span>` : ''}
+          </div>
+          <div class="card-actions">
+            <a href="${item.url}" target="_blank" class="btn btn-primary">查看资源</a>
+            <button class="btn" onclick="removeFav(${item.resource_id}, this)">取消收藏</button>
+          </div>
+        </div>`;
+      grid.appendChild(card);
+    }
+    container.innerHTML = '';
+    container.appendChild(grid);
+  } catch(e) {
+    container.innerHTML = `<div class="empty-state">加载失败: ${e.message}</div>`;
+  }
+}
+
+async function removeFav(rid, btn) {
+  try {
+    const r = await fetch(`/api/favorites/${rid}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (d.ok) {
+      showToast('已取消收藏');
+      btn.closest('.card').remove();
+      const grid = document.querySelector('.card-grid');
+      if (grid && grid.children.length === 0) loadFavorites();
+    } else {
+      showToast(d.error || '操作失败');
+    }
+  } catch(e) {
+    showToast('网络错误');
+  }
+}
+
+async function doLogout() {
+  await fetch('/logout');
+  window.location.href = '/';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+init();
+</script>
+</body>
+</html>

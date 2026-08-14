@@ -630,8 +630,8 @@ tr:hover { background: rgba(0, 255, 156, 0.05) !important; }
     <div id="sec-users" style="display:none">
       <div class="hdr"><h1>用户管理</h1><button class="btn btn-p btn-s" onclick="showModal('addUserModal')">+ 添加用户</button></div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>最后登录</th><th>操作</th></tr></thead>
-        <tbody id="userTbl"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">加载中...</td></tr></tbody></table>
+        <table><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>最后登录</th><th>GitHub</th><th>操作</th></tr></thead>
+        <tbody id="userTbl"><tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px">加载中...</td></tr></tbody></table>
       </div>
     </div>
 
@@ -838,8 +838,12 @@ async function loadUsers(){
     <td><span class="badge ${u.role==='admin'?'badge-y':'badge-b'}">${u.role==='admin'?'管理员':'用户'}</span></td>
     <td><span class="badge ${u.status===1?'badge-g':'badge-r'}">${u.status===1?'正常':'禁用'}</span></td>
     <td style="color:var(--text-muted);font-size:.72rem">${(u.last_login||'').substring(0,16)}</td>
-    <td><button class="btn btn-g btn-s" onclick="toggleUser(${u.id},${u.status})">${u.status===1?'禁用':'启用'}</button></td>
-  </tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">暂无用户</td></tr>';
+    <td id="gh-${u.id}">${u.github_id?`<span style="color:var(--accent-green);font-size:.72rem">${u.github_id}</span>`:'<span style="color:var(--text-muted);font-size:.72rem">未绑定</span>'}</td>
+    <td>
+      <button class="btn btn-g btn-s" onclick="toggleUser(${u.id},${u.status})">${u.status===1?'禁用':'启用'}</button>
+      ${u.github_id?`<button class="btn btn-g btn-s" onclick="unbindGitHub(${u.id})">解绑</button>`:`<button class="btn btn-p btn-s" onclick="bindGitHub(${u.id})">绑定</button>`}
+    </td>
+  </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px">暂无用户</td></tr>';
 }
 
 async function addUser(){
@@ -852,6 +856,19 @@ async function addUser(){
 async function toggleUser(uid,status){
   const d=await api('/api/users/'+uid,'POST',{status:status===1?0:1});
   if(d.ok||d.success){show('操作成功');loadUsers()}else show(d.error||'失败','e');
+}
+
+async function bindGitHub(uid){
+  const id = prompt('输入要绑定的 GitHub ID（数字）：');
+  if(!id) return;
+  const d=await api('/api/users/'+uid+'/github','POST',{github_id:id});
+  if(d.ok||d.success){show('绑定成功');loadUsers()}else show(d.error||'绑定失败','e');
+}
+
+async function unbindGitHub(uid){
+  if(!confirm('确定解绑该用户的 GitHub 账号？')) return;
+  const d=await api('/api/users/'+uid+'/github','POST',{github_id:null});
+  if(d.ok||d.success){show('已解绑');loadUsers()}else show(d.error||'解绑失败','e');
 }
 
 async function loadImportQueue(){

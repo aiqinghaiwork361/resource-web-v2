@@ -2375,8 +2375,8 @@ tbody tr:last-child td {
 
         
         
-        <div class="nav-item" >
-          
+        <div class="nav-item" data-page="profile" onclick="navigateTo('profile', this)">
+          <span class="icon">♥</span> 我的收藏
         </div>
       </div>
 
@@ -2523,6 +2523,19 @@ tbody tr:last-child td {
       </div>
     </div>
 
+    <!-- PAGE: PROFILE -->
+    <div class="page" id="page-profile">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">我的收藏</h2>
+          <p class="section-subtitle">你收藏的影视资源</p>
+        </div>
+      </div>
+      <div id="profileContent">
+        <div class="loading">加载中...</div>
+      </div>
+    </div>
+
     <!-- PAGE: ADMIN -->
     <div class="page" id="page-admin">
       <div class="section-header">
@@ -2570,6 +2583,8 @@ tbody tr:last-child td {
               <th>搜索次数</th>
               <th>最后活跃</th>
               <th>状态</th>
+              <th>GitHub</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -3143,6 +3158,80 @@ function navigateTo(pageId, el) {
   // Initialize pages on first visit
   if (pageId === 'trending') loadTrending('movie');
   if (pageId === 'logs') refreshLogs();
+  if (pageId === 'profile') loadProfileFavorites();
+}
+
+
+// ============================================================
+// PROFILE FAVORITES
+// ============================================================
+async function loadProfileFavorites() {
+  const container = document.getElementById('profileContent');
+  if (!container) return;
+  try {
+    const r = await fetch('/api/favorites');
+    if (r.status === 401) { window.location.href = '/login'; return; }
+    const d = await r.json();
+    const items = d.items || [];
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <div>还没有收藏任何资源</div>
+          <div style="margin-top:8px;font-size:0.85rem">浏览首页，点击资源卡片上的收藏按钮添加</div>
+          <a href="/" class="btn btn-primary" style="margin-top:20px;display:inline-block">去逛逛</a>
+        </div>`;
+      return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'card-grid';
+    for (const item of items) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      const posterHtml = item.images ? `<img src="${item.images.split(',')[0]}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'card-poster-placeholder\\'>🎬</div>'">` : `<div class="card-poster-placeholder">🎬</div>`;
+      const tags = [];
+      if (item.type) tags.push(item.type);
+      if (item.quality) tags.push(item.quality);
+      if (item.year) tags.push(String(item.year));
+      const tagHtml = tags.map(t => `<span class="card-tag">${t}</span>`).join('');
+      card.innerHTML = `
+        <div class="card-poster">${posterHtml}</div>
+        <div class="card-body">
+          <div class="card-title">${item.title || '无标题'}</div>
+          <div class="card-meta">
+            ${tagHtml}
+            ${item.rating ? `<span class="card-rating">★ ${item.rating}</span>` : ''}
+          </div>
+          <div class="card-actions">
+            <a href="${item.url}" target="_blank" class="btn btn-primary">查看资源</a>
+            <button class="btn" onclick="removeProfileFav(${item.resource_id}, this)">取消收藏</button>
+          </div>
+        </div>`;
+      grid.appendChild(card);
+    }
+    container.innerHTML = '';
+    container.appendChild(grid);
+  } catch(e) {
+    container.innerHTML = `<div class="empty-state">加载失败: ${e.message}</div>`;
+  }
+}
+
+async function removeProfileFav(rid, btn) {
+  try {
+    const r = await fetch(`/api/favorites/${rid}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (d.ok) {
+      showToast('已取消收藏');
+      const card = btn.closest('.card');
+      if (card) card.remove();
+      const grid = document.querySelector('#profileContent .card-grid');
+      if (grid && grid.children.length === 0) loadProfileFavorites();
+    } else {
+      showToast(d.error || '操作失败');
+    }
+  } catch(e) {
+    showToast('网络错误');
+  }
 }
 
 
@@ -4155,13 +4244,23 @@ document.getElementById('aggSearch')?.addEventListener('keydown', (e) => {
     if (ud.logged_in) {
       const userArea = document.getElementById('userArea');
       if (userArea) {
-        userArea.innerHTML = `
-          <div style="display:flex;align-items:center;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="window.location.href='/admin'" title="后台管理">⚙ 管理</button>
-            <span style="font-size:0.82rem;color:var(--text-secondary)">${ud.username}</span>
-            <button class="btn btn-ghost btn-sm" onclick="window.location.href='/logout'">退出</button>
-          </div>
-        `;
+        if (ud.is_admin) {
+          userArea.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn btn-ghost btn-sm" onclick="window.location.href='/admin'" title="后台管理">⚙ 管理</button>
+              <span style="font-size:0.82rem;color:var(--text-secondary)">${ud.username}</span>
+              <button class="btn btn-ghost btn-sm" onclick="window.location.href='/logout'">退出</button>
+            </div>
+          `;
+        } else {
+          userArea.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn btn-ghost btn-sm" onclick="window.location.href='/profile'" title="我的收藏">♥ 我的</button>
+              <span style="font-size:0.82rem;color:var(--text-secondary)">${ud.username}</span>
+              <button class="btn btn-ghost btn-sm" onclick="window.location.href='/logout'">退出</button>
+            </div>
+          `;
+        }
       }
     }
   } catch(e) {}
