@@ -16,6 +16,7 @@ import pymysql
 import pymysql.cursors
 import requests as http_requests
 from flask import Flask, jsonify, request, send_from_directory, session, redirect
+from requests_oauthlib import OAuth2Session
 import json
 import bcrypt
 import hashlib
@@ -615,6 +616,129 @@ def login_page():
     resp.cache_control.no_store = True
     resp.cache_control.must_revalidate = True
     return resp
+
+
+# ==================== OAuth 2.0 (GitHub) ====================
+GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID", "")
+GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET", "")
+GITHUB_AUTHORIZATION_BASE_URL = "https://github.com/login/oauth/authorize"
+GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
+GITHUB_API_URL = "https://api.github.com/user"
+
+
+def _get_oauth_github():
+    if not GITHUB_CLIENT_ID or not GITHUB_CLIENT_SECRET:
+        return None
+    redirect_uri = _build_oauth_redirect_uri()
+    return OAuth2Session(
+        GITHUB_CLIENT_ID,
+        redirect_uri=redirect_uri,
+        scope=["user:email"],
+    )
+
+
+def _build_oauth_redirect_uri():
+    """动态构建重定向 URI，优先环境变量，否则用当前请求 Host"""
+    env_uri = os.environ.get("GITHUB_REDIRECT_URI", "")
+    if env_uri:
+        return env_uri
+    scheme = request.scheme
+    host = request.host
+    return f"{scheme}://{host}/login/github/callback"
+
+
+def _find_or_create_oauth_user(github_id, username, email):
+    """通过 github_id 查找用户，找不到则自动创建并返回角色"""
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute(
+            "SELECT id, username, role, status FROM users WHERE github_id=%s",
+            (str(github_id),),
+        )
+        user = cur.fetchone()
+        if user:
+            if user.get("status") != 1:
+                return None, "账号已被禁用"
+            return user, None
+
+        display_name = username or f"github_{github_id}"
+        safe_email = (email or "").strip() or None
+        cur.execute(
+            "INSERT INTO users (username, email, role, status, github_id) VALUES (%s, %s, %s, %s, %s)",
+            (display_name, safe_email, "user", 1, str(github_id)),
+        )
+        db.commit()
+        cur.execute(
+            "SELECT id, username, role, status FROM users WHERE github_id=%s",
+            (str(github_id),),
+        )
+        new_user = cur.fetchone()
+        return new_user, None
+    finally:
+        db.close()
+
+
+@app.route("/login/github")
+def login_github():
+    if not GITHUB_CLIENT_ID or not GITHUB_CLIENT_SECRET:
+        return jsonify({"error": "服务端未配置 GitHub OAuth"}), 500
+    redirect_uri = _build_oauth_redirect_uri()
+    github = OAuth2Session(
+        GITHUB_CLIENT_ID,
+        redirect_uri=redirect_uri,
+        scope=["user:email"],
+    )
+    authorization_url, state = github.authorization_url(GITHUB_AUTHORIZATION_BASE_URL)
+    session["oauth_state"] = state
+    return redirect(authorization_url)
+
+
+@app.route("/login/github/callback")
+def github_callback():
+    if not GITHUB_CLIENT_ID or not GITHUB_CLIENT_SECRET:
+        return redirect("/login")
+    state = session.pop("oauth_state", None)
+    redirect_uri = _build_oauth_redirect_uri()
+    github = OAuth2Session(
+        GITHUB_CLIENT_ID,
+        redirect_uri=redirect_uri,
+        scope=["user:email"],
+    )
+    try:
+        github.fetch_token(
+            GITHUB_TOKEN_URL,
+            client_id=GITHUB_CLIENT_ID,
+            client_secret=GITHUB_CLIENT_SECRET,
+            code=request.args.get("code"),
+            state=state,
+        )
+    except Exception as e:
+        app.logger.warning("GitHub OAuth token 获取失败: %s", e)
+        return redirect("/login?error=oauth_failed")
+    try:
+        user_resp = github.get(GITHUB_API_URL)
+        user_data = user_resp.json()
+    except Exception as e:
+        app.logger.warning("GitHub API 请求失败: %s", e)
+        return redirect("/login?error=oauth_api_failed")
+
+    github_id = user_data.get("id")
+    username = user_data.get("login")
+    email = user_data.get("email")
+    if not github_id:
+        return redirect("/login?error=oauth_no_id")
+
+    user, error = _find_or_create_oauth_user(github_id, username, email)
+    if error:
+        return redirect(f"/login?error={error}")
+
+    session["is_admin"] = user["role"] == "admin"
+    session["user_id"] = user["id"]
+    session["username"] = user["username"]
+    session.permanent = True
+    session.modified = True
+    return redirect("/admin" if user["role"] == "admin" else "/")
 
 
 @app.route("/logout")

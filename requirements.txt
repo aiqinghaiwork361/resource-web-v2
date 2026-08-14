@@ -1,6 +1,7 @@
 flask>=3.0,<3.1
 pymysql>=1.1.1
 requests>=2.31.0
+requests-oauthlib>=2.0.0
 DBUtils>=2.0
 gunicorn>=22.0
 redis>=5.0

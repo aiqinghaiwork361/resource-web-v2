@@ -31,3 +31,6 @@ Thumbs.db
 *.tmp
 *.bak
 *.cache
+
+# Hermes 本地元数据
+.hermes/

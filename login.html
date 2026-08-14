@@ -377,6 +377,38 @@ body::after {
   margin-right: 0.4rem;
 }
 
+/* ═══════════ GITHUB OAUTH BUTTON ═══════════ */
+.btn-github {
+  width: 100%;
+  padding: 0.85rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--r);
+  background: rgba(20, 28, 48, 0.6);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--t) var(--ease);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+}
+.btn-github i {
+  margin-right: 0.4rem;
+  font-size: 1.1rem;
+}
+.btn-github:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.3);
+  background: rgba(30, 40, 65, 0.8);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+}
+.btn-github:active {
+  transform: translateY(0);
+}
+
 /* ═══════════ BACK LINK ═══════════ */
 .back-link {
   display: block;
@@ -463,6 +495,13 @@ body::after {
     <i class="fas fa-lock"></i>
   </div>
 
+  <!-- GitHub OAuth 登录 -->
+  <div class="btn-wrap" style="animation: fadeUp 0.5s 0.32s var(--ease) both;">
+    <button class="btn-github" onclick="doGithubLogin()">
+      <i class="fab fa-github"></i> 使用 GitHub 登录
+    </button>
+  </div>
+
   <!-- CSRF Token 隐藏字段 -->
   <input type="hidden" id="csrf_token" name="csrf_token" value="">
 
@@ -534,6 +573,10 @@ async function doLogin() {
     btn.style.opacity = '';
     btn.style.pointerEvents = '';
   }
+}
+
+async function doGithubLogin() {
+  window.location.href = '/login/github';
 }
 </script>
 </body>
