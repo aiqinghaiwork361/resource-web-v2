@@ -725,6 +725,8 @@ tr:hover { background: rgba(0, 255, 156, 0.05) !important; }
         <div class="fg"><label class="fl">站点名称</label><input class="fi" id="setSiteName" placeholder="VaultDrive"></div>
         <div class="fg"><label class="fl">TMDB API Key</label><input class="fi" id="setTmdbKey" placeholder="TMDB API Key"></div>
         <div class="fg"><label class="fl">管理员密码</label><input class="fi" id="setAdminPass" type="password" placeholder="留空不修改"></div>
+        <div class="fg"><label class="fl">搜索日志保留天数</label><input class="fi" id="setSearchRetention" type="number" placeholder="90" min="7" max="3650"></div>
+        <div style="color:var(--text-muted);font-size:.72rem;margin-top:4px">建议 90-365 天，设为 0 表示永久保留</div>
       </div>
     </div>
 
@@ -1025,6 +1027,7 @@ async function loadSettings(){
     items.forEach(s=>{
       if(s.key==='site_name')document.getElementById('setSiteName').value=s.value||'';
       if(s.key==='tmdb_api_key')document.getElementById('setTmdbKey').value=s.value||'';
+      if(s.key==='search_log_retention_days')document.getElementById('setSearchRetention').value=s.value||'90';
     });
   }catch(e){}
 }
@@ -1032,7 +1035,8 @@ async function loadSettings(){
 async function saveSettings(){
   const settings=[
     {key:'site_name',value:document.getElementById('setSiteName').value},
-    {key:'tmdb_api_key',value:document.getElementById('setTmdbKey').value}
+    {key:'tmdb_api_key',value:document.getElementById('setTmdbKey').value},
+    {key:'search_log_retention_days',value:document.getElementById('setSearchRetention').value||'90'}
   ];
   const pass=document.getElementById('setAdminPass').value;
   const d=await api('/api/admin/settings','POST',{settings,admin_pass:pass});
