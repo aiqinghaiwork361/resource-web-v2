@@ -548,6 +548,7 @@ tr:hover { background: rgba(0, 255, 156, 0.05) !important; }
     <div class="nav" onclick="showSec('tmdb')"><span class="ic">🎬</span> TMDB爬虫</div>
     <div class="nav" onclick="showSec('apis')"><span class="ic">🔌</span> API测试</div>
     <div class="nav" onclick="showSec('announcements')"><span class="ic">📢</span> 公告管理</div>
+    <div class="nav" onclick="showSec('sources')"><span class="ic">📡</span> 来源管理</div>
     <div class="nav" onclick="showSec('settings')"><span class="ic">⚙</span> 系统设置</div>
     <div class="nav" onclick="showSec('logs')"><span class="ic">📋</span> 系统日志</div>
     <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border-subtle)">
@@ -708,6 +709,15 @@ tr:hover { background: rgba(0, 255, 156, 0.05) !important; }
       </div>
     </div>
 
+    <!-- 来源管理 -->
+    <div id="sec-sources" style="display:none">
+      <div class="hdr"><h1>来源管理</h1><button class="btn btn-p btn-s" onclick="showModal('sourceModal')">+ 新建来源</button></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>ID</th><th>标识</th><th>名称</th><th>颜色</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody id="sourceTbl"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">加载中...</td></tr></tbody></table>
+      </div>
+    </div>
+
     <!-- 系统设置 -->
     <div id="sec-settings" style="display:none">
       <div class="hdr"><h1>系统设置</h1><button class="btn btn-p btn-s" onclick="saveSettings()">保存</button></div>
@@ -771,6 +781,24 @@ tr:hover { background: rgba(0, 255, 156, 0.05) !important; }
   </div>
 </div>
 
+<!-- 来源管理弹窗 -->
+<div class="modal" id="sourceModal">
+  <div class="modal-c">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 id="sourceModalTitle" style="font-family:var(--font-mono);color:var(--amber);text-transform:uppercase;letter-spacing:.1em;margin:0">&gt; 新建来源</h3>
+      <button onclick="resetSourceModal();hideModal('sourceModal')" class="btn btn-g btn-s">✕</button>
+    </div>
+    <div class="fg"><label class="fl">标识</label><input class="fi" id="srcName" placeholder="如 quark"></div>
+    <div class="fg"><label class="fl">名称</label><input class="fi" id="srcLabel" placeholder="如 夸克网盘"></div>
+    <div class="fg"><label class="fl">颜色</label><input class="fi" id="srcColor" type="color" value="#58a6ff"></div>
+    <div class="fg" style="display:flex;align-items:center;gap:10px"><label class="fl" style="margin:0">状态</label><input type="checkbox" id="srcActive" checked><span style="font-size:.8rem;color:var(--text-secondary)">启用</span></div>
+    <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-g btn-s" onclick="resetSourceModal();hideModal('sourceModal')">取消</button>
+      <button class="btn btn-p btn-s" onclick="saveSource()">保存</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -801,6 +829,7 @@ function showSec(id){
   if(id==='logs')loadLogs();
   if(id==='settings')loadSettings();
   if(id==='announcements')loadAnnouncements();
+  if(id==='sources')loadSources();
 }
 
 async function loadDashboard(){
@@ -1105,6 +1134,66 @@ function resetAnnounceModal(){
 }
 
 async function clearLogs(){const d=await api('/api/admin/logs/clear','POST');show(d.ok?'已清空':'失败',d.ok?'s':'e');loadLogs()}
+
+async function loadSources(){
+  const d=await api('/api/admin/sources');
+  if(!d)return;
+  const items=d.items||[];
+  document.getElementById('sourceTbl').innerHTML=items.length?items.map(s=>`<tr>
+    <td>${s.id}</td>
+    <td><code>${s.name||''}</code></td>
+    <td><strong>${s.label||s.name||''}</strong></td>
+    <td><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${s.color||'#58a6ff'};border:1px solid rgba(255,255,255,0.15)"></span> <code>${s.color||''}</code></td>
+    <td><span class="badge ${s.active==='1'||s.active===1?'badge-g':'badge-r'}">${s.active==='1'||s.active===1?'启用':'禁用'}</span></td>
+    <td>
+      <button class="btn btn-g btn-s" onclick="editSource(${s.id})">编辑</button>
+      <button class="btn btn-r btn-s" onclick="deleteSource(${s.id})">删除</button>
+    </td>
+  </tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">暂无来源</td></tr>';
+}
+
+async function saveSource(){
+  const name=document.getElementById('srcName').value.trim();
+  const label=document.getElementById('srcLabel').value.trim();
+  const color=document.getElementById('srcColor').value.trim();
+  const active=document.getElementById('srcActive').checked?1:0;
+  if(!name||!label){show('请填写标识和名称','e');return}
+  const payload={name,label,color,active};
+  const editId=document.getElementById('sourceModal').dataset.editId;
+  const url=editId?`/api/admin/sources/${editId}`:'/api/admin/sources';
+  const d=await api(url,'POST',payload);
+  if(d.ok||d.success){show(editId?'已更新':'已创建','s');hideModal('sourceModal');loadSources()}
+  else show(d.error||'失败','e');
+}
+
+async function deleteSource(id){
+  if(!confirm('确定删除该来源？')) return;
+  const d=await api(`/api/admin/sources/${id}`,'DELETE');
+  if(d.ok||d.success){show('已删除');loadSources()}else show(d.error||'删除失败','e');
+}
+
+async function editSource(id){
+  const d=await api('/api/admin/sources');
+  if(!d)return;
+  const item=(d.items||[]).find(x=>x.id===id);
+  if(!item)return;
+  document.getElementById('sourceModal').dataset.editId=id;
+  document.getElementById('srcName').value=item.name||'';
+  document.getElementById('srcLabel').value=item.label||'';
+  document.getElementById('srcColor').value=item.color||'#58a6ff';
+  document.getElementById('srcActive').checked=item.active==='1'||item.active===1;
+  document.getElementById('sourceModalTitle').textContent='编辑来源';
+  showModal('sourceModal');
+}
+
+function resetSourceModal(){
+  document.getElementById('sourceModal').dataset.editId='';
+  document.getElementById('srcName').value='';
+  document.getElementById('srcLabel').value='';
+  document.getElementById('srcColor').value='#58a6ff';
+  document.getElementById('srcActive').checked=true;
+  document.getElementById('sourceModalTitle').textContent='新建来源';
+}
 
 loadDashboard();
 </script>

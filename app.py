@@ -1727,6 +1727,83 @@ def api_admin_announcements_delete(aid):
         db.close()
 
 
+# ==================== API: 资源来源管理 ====================
+@app.route("/api/admin/sources")
+@admin_required
+def api_admin_sources():
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute("SELECT id, name, label, color, active, created_at, updated_at FROM sources ORDER BY id ASC")
+        items = cur.fetchall()
+        for i in items:
+            i["created_at"] = str(i["created_at"]) if i.get("created_at") else ""
+            i["updated_at"] = str(i["updated_at"]) if i.get("updated_at") else ""
+        return jsonify({"items": items})
+    finally:
+        db.close()
+
+
+@app.route("/api/admin/sources", methods=["POST"])
+@admin_required
+def api_admin_sources_create():
+    data = request.get_json() or {}
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute(
+            "INSERT INTO sources (name, label, color, active) VALUES (%s,%s,%s,%s)",
+            (
+                data.get("name", ""),
+                data.get("label", ""),
+                data.get("color", "#58a6ff"),
+                1 if data.get("active", True) else 0,
+            ),
+        )
+        db.commit()
+        return jsonify({"ok": True, "id": cur.lastrowid})
+    finally:
+        db.close()
+
+
+@app.route("/api/admin/sources/<int:sid>", methods=["POST"])
+@admin_required
+def api_admin_sources_update(sid):
+    data = request.get_json() or {}
+    db = get_db()
+    try:
+        cur = db.cursor()
+        sets, vals = [], []
+        for k in ("name", "label", "color"):
+            if k in data:
+                sets.append(f"{k}=%s")
+                vals.append(data[k])
+        if "active" in data:
+            sets.append("active=%s")
+            vals.append(1 if data["active"] else 0)
+        if not sets:
+            return jsonify({"error": "无有效字段"}), 400
+        vals.append(sid)
+        cur.execute(f"UPDATE sources SET {','.join(sets)} WHERE id=%s", vals)
+        db.commit()
+        return jsonify({"ok": True, "affected": cur.rowcount})
+    finally:
+        db.close()
+
+
+@app.route("/api/admin/sources/<int:sid>", methods=["DELETE"])
+@admin_required
+def api_admin_sources_delete(sid):
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute("DELETE FROM sources WHERE id=%s", (sid,))
+        db.commit()
+        return jsonify({"ok": True, "affected": cur.rowcount})
+    finally:
+        db.close()
+
+
 # ==================== 用户信息 API ====================
 @app.route("/api/me")
 def api_me():
