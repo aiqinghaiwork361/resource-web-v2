@@ -2778,6 +2778,62 @@ def api_admin_settings_update():
 
 
 # ── 资源批量操作 ──
+@app.route("/api/admin/search_logs")
+@admin_required
+def api_admin_search_logs():
+    db = get_db()
+    try:
+        cur = db.cursor()
+        per_page = min(int(request.args.get("per_page", 50)), 200)
+        page = int(request.args.get("page", 1))
+        offset = (page - 1) * per_page
+        cur.execute(
+            "SELECT id, keyword, user_id, ip, created_at FROM search_logs ORDER BY id DESC LIMIT %s OFFSET %s",
+            (per_page, offset),
+        )
+        items = cur.fetchall()
+        cur.execute("SELECT COUNT(*) as c FROM search_logs")
+        total = cur.fetchone()["c"]
+        return jsonify({"items": items, "total": total, "page": page, "per_page": per_page})
+    finally:
+        db.close()
+
+
+@app.route("/api/admin/search_logs/<int:sid>", methods=["DELETE"])
+@admin_required
+def api_admin_search_logs_delete(sid):
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute("DELETE FROM search_logs WHERE id=%s", (sid,))
+        db.commit()
+        return jsonify({"ok": True, "affected": cur.rowcount})
+    finally:
+        db.close()
+
+
+@app.route("/api/admin/search_logs/cleanup", methods=["POST"])
+@admin_required
+def api_admin_search_logs_cleanup():
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute("SELECT value FROM settings WHERE `key`='search_log_retention_days'")
+        row = cur.fetchone()
+        days = int(row["value"]) if row and row["value"] else 90
+        if days <= 0:
+            return jsonify({"ok": True, "deleted": 0, "msg": "永久保留模式，未清理"})
+        cur.execute(
+            "DELETE FROM search_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL %s DAY)",
+            (days,),
+        )
+        db.commit()
+        return jsonify({"ok": True, "deleted": cur.rowcount, "retention_days": days})
+    finally:
+        db.close()
+
+
+# ── 资源批量操作 ──
 @app.route("/api/admin/resources/batch", methods=["POST"])
 @admin_required
 def api_admin_resources_batch():

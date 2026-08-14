@@ -551,6 +551,7 @@ tr:hover { background: rgba(0, 255, 156, 0.05) !important; }
     <div class="nav" onclick="showSec('sources')"><span class="ic">📡</span> 来源管理</div>
     <div class="nav" onclick="showSec('settings')"><span class="ic">⚙</span> 系统设置</div>
     <div class="nav" onclick="showSec('logs')"><span class="ic">📋</span> 系统日志</div>
+    <div class="nav" onclick="showSec('searchlogs')"><span class="ic">🔍</span> 搜索日志</div>
     <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border-subtle)">
       <div class="nav" onclick="window.location.href='/'"><span class="ic">🏠</span> 返回首页</div>
       <div class="nav" onclick="window.location.href='/logout'"><span class="ic">🚪</span> 退出</div>
@@ -739,6 +740,20 @@ tr:hover { background: rgba(0, 255, 156, 0.05) !important; }
         </div>
       </div>
       <div class="tbl-wrap"><div class="log-viewer" id="logViewer">加载中...</div></div>
+    </div>
+
+    <!-- 搜索日志 -->
+    <div id="sec-searchlogs" style="display:none">
+      <div class="hdr"><h1>搜索日志</h1>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-g btn-s" onclick="loadSearchLogs()">↻ 刷新</button>
+          <button class="btn btn-r btn-s" onclick="cleanupSearchLogs()">清理过期</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>ID</th><th>关键词</th><th>用户</th><th>IP</th><th>时间</th><th>操作</th></tr></thead>
+          <tbody id="searchlogTbl"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">加载中...</td></tr></tbody></table>
+      </div>
     </div>
   </div>
 </div>
@@ -1197,6 +1212,32 @@ function resetSourceModal(){
   document.getElementById('srcColor').value='#58a6ff';
   document.getElementById('srcActive').checked=true;
   document.getElementById('sourceModalTitle').textContent='新建来源';
+}
+
+async function loadSearchLogs(){
+  const d=await api('/api/admin/search_logs?per_page=50');
+  if(!d)return;
+  const items=d.items||d.logs||d||[];
+  document.getElementById('searchlogTbl').innerHTML=items.length?items.map(s=>`<tr>
+    <td>${s.id}</td>
+    <td><strong>${s.keyword||''}</strong></td>
+    <td style="color:var(--text-muted);font-size:.72rem">${s.username||s.user_id||'-'}</td>
+    <td style="color:var(--text-muted);font-size:.72rem">${s.ip||''}</td>
+    <td style="color:var(--text-muted);font-size:.72rem">${(s.created_at||'').substring(0,19)}</td>
+    <td><button class="btn btn-r btn-s" onclick="deleteSearchLog(${s.id})">删除</button></td>
+  </tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">暂无搜索日志</td></tr>';
+}
+
+async function deleteSearchLog(id){
+  if(!confirm('确定删除该搜索记录？')) return;
+  const d=await api('/api/admin/search_logs/'+id,'DELETE');
+  if(d.ok||d.success){show('已删除');loadSearchLogs()}else show(d.error||'删除失败','e');
+}
+
+async function cleanupSearchLogs(){
+  if(!confirm('按当前保留天数清理过期搜索日志？')) return;
+  const d=await api('/api/admin/search_logs/cleanup','POST');
+  if(d.ok||d.success){show(`已清理 ${d.deleted||0} 条记录`);loadSearchLogs()}else show(d.error||'清理失败','e');
 }
 
 loadDashboard();
