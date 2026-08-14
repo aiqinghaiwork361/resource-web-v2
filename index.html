@@ -770,6 +770,33 @@ input, select {
   box-shadow: 0 0 6px rgba(63, 185, 80, 0.5);
 }
 
+/* ============================================
+   ANNOUNCEMENT BANNER
+   ============================================ */
+.announcement-banner {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+.announcement-banner .ann-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.ann-banner {
+  background: linear-gradient(90deg, rgba(0,212,255,0.12), rgba(0,255,156,0.08));
+}
+.ann-alert {
+  background: rgba(248,81,73,0.12);
+  border-bottom-color: rgba(248,81,73,0.25);
+}
+.ann-info {
+  background: rgba(255,255,255,0.04);
+}
+
 /* v20260807_165500: NovaMind 头像 */
 .avatar-btn {
   width: 34px; height: 34px;
@@ -2395,6 +2422,7 @@ tbody tr:last-child td {
 
   <!-- ===== MAIN ===== -->
   <main class="main-content">
+    <div id="announcementBanner" style="display:none"></div>
 
     <!-- PAGE: HOME -->
     <div class="page active" id="page-home">
@@ -4330,6 +4358,21 @@ document.getElementById('aggSearch')?.addEventListener('keydown', (e) => {
     document.querySelectorAll('.header-stat .count').forEach(e => e.textContent = total);
     const statEl = document.getElementById('statTotal');
     if (statEl) statEl.textContent = total;
+  } catch(e) {}
+
+  // 加载公告
+  try {
+    const ar = await fetch('/api/announcements');
+    const ad = await ar.json();
+    if (ad.title || ad.content) {
+      const banner = document.getElementById('announcementBanner');
+      if (banner) {
+        const typeClass = ad.type === 'alert' ? 'ann-alert' : ad.type === 'info' ? 'ann-info' : 'ann-banner';
+        banner.className = `announcement-banner ${typeClass}`;
+        banner.innerHTML = `<div class="ann-inner"><strong>${ad.title ? '【' + ad.title + '】' : ''}</strong> ${ad.content || ''}</div>`;
+        banner.style.display = 'block';
+      }
+    }
   } catch(e) {}
 
   // 并行加载热门影视海报墙（v20260807_1937: 精简首页，去掉轮播+最新收录）

@@ -801,7 +801,7 @@ def api_site_settings():
     db = get_db()
     try:
         cur = db.cursor()
-        cur.execute("SELECT `key`, `value` FROM settings WHERE `key` IN ('site_name', 'site_footer')")
+        cur.execute("SELECT `key`, `value` FROM settings WHERE `key` IN ('site_name', 'site_footer', 'announcement_title', 'announcement_content', 'announcement_type', 'announcement_active')")
         items = cur.fetchall()
         result = {item["key"]: item["value"] for item in items}
         return jsonify(result)
@@ -1620,6 +1620,109 @@ def api_user_bind_github_self():
         )
         db.commit()
         return jsonify({"ok": True})
+    finally:
+        db.close()
+
+
+# ==================== API: 公告管理 ====================
+@app.route("/api/announcements")
+def api_announcements():
+    """获取当前生效的公告（公开）"""
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute(
+            "SELECT id, title, content, type FROM announcements WHERE active=1 AND (start_time IS NULL OR start_time <= NOW()) AND (end_time IS NULL OR end_time >= NOW()) ORDER BY id DESC LIMIT 1"
+        )
+        row = cur.fetchone()
+        if not row:
+            return jsonify({})
+        return jsonify({
+            "id": row["id"],
+            "title": row["title"],
+            "content": row["content"],
+            "type": row["type"],
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/admin/announcements")
+@admin_required
+def api_admin_announcements():
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute("SELECT id, title, content, type, active, start_time, end_time, created_at, updated_at FROM announcements ORDER BY id DESC")
+        items = cur.fetchall()
+        for i in items:
+            i["start_time"] = str(i["start_time"]) if i.get("start_time") else ""
+            i["end_time"] = str(i["end_time"]) if i.get("end_time") else ""
+            i["created_at"] = str(i["created_at"]) if i.get("created_at") else ""
+            i["updated_at"] = str(i["updated_at"]) if i.get("updated_at") else ""
+        return jsonify({"items": items})
+    finally:
+        db.close()
+
+
+@app.route("/api/admin/announcements", methods=["POST"])
+@admin_required
+def api_admin_announcements_create():
+    data = request.get_json() or {}
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute(
+            "INSERT INTO announcements (title, content, type, active, start_time, end_time) VALUES (%s,%s,%s,%s,%s,%s)",
+            (
+                data.get("title", ""),
+                data.get("content", ""),
+                data.get("type", "banner"),
+                1 if data.get("active", True) else 0,
+                data.get("start_time") or None,
+                data.get("end_time") or None,
+            ),
+        )
+        db.commit()
+        return jsonify({"ok": True, "id": cur.lastrowid})
+    finally:
+        db.close()
+
+
+@app.route("/api/admin/announcements/<int:aid>", methods=["POST"])
+@admin_required
+def api_admin_announcements_update(aid):
+    data = request.get_json() or {}
+    db = get_db()
+    try:
+        cur = db.cursor()
+        sets, vals = [], []
+        for k in ("title", "content", "type", "start_time", "end_time"):
+            if k in data:
+                sets.append(f"{k}=%s")
+                vals.append(data[k])
+        if "active" in data:
+            sets.append("active=%s")
+            vals.append(1 if data["active"] else 0)
+        if not sets:
+            return jsonify({"error": "无有效字段"}), 400
+        vals.append(aid)
+        cur.execute(f"UPDATE announcements SET {','.join(sets)} WHERE id=%s", vals)
+        db.commit()
+        return jsonify({"ok": True, "affected": cur.rowcount})
+    finally:
+        db.close()
+
+
+@app.route("/api/admin/announcements/<int:aid>", methods=["DELETE"])
+@admin_required
+def api_admin_announcements_delete(aid):
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute("DELETE FROM announcements WHERE id=%s", (aid,))
+        db.commit()
+        return jsonify({"ok": True, "affected": cur.rowcount})
     finally:
         db.close()
 
