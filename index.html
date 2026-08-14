@@ -1301,6 +1301,11 @@ input, select {
   background: rgba(255,255,255,0.08);
   border-color: var(--border-medium);
 }
+.btn-icon.is-fav {
+  color: #ff2d95;
+  border-color: rgba(255,45,149,0.35);
+  background: rgba(255,45,149,0.12);
+}
 
 /* ============================================
    FILTER CHIPS
@@ -3234,6 +3239,57 @@ async function removeProfileFav(rid, btn) {
   }
 }
 
+async function toggleFavorite(btn, rid) {
+  if (!btn) return;
+  const isFav = btn.classList.contains('is-fav');
+  const method = isFav ? 'DELETE' : 'POST';
+  const url = `/api/favorites/${rid}`;
+  try {
+    const r = await fetch(url, { method });
+    const d = await r.json();
+    if (d.ok || d.success) {
+      if (isFav) {
+        btn.classList.remove('is-fav');
+        btn.innerHTML = '♡';
+        btn.title = '收藏';
+        showToast('已取消收藏');
+      } else {
+        btn.classList.add('is-fav');
+        btn.innerHTML = '♥';
+        btn.title = '取消收藏';
+        showToast('已收藏', 'success');
+      }
+    } else {
+      if (r.status === 401) {
+        showToast('请先登录', 'error');
+        window.location.href = '/login';
+        return;
+      }
+      showToast(d.error || '操作失败', 'error');
+    }
+  } catch(e) {
+    showToast('网络错误', 'error');
+  }
+}
+
+async function checkFavoriteStatus(rids) {
+  if (!rids.length) return;
+  try {
+    const r = await fetch('/api/favorites');
+    const d = await r.json();
+    if (!d.items) return;
+    const favIds = new Set(d.items.map(it => it.resource_id));
+    document.querySelectorAll('.fav-btn').forEach(btn => {
+      const id = parseInt(btn.getAttribute('data-id'), 10);
+      if (favIds.has(id)) {
+        btn.classList.add('is-fav');
+        btn.innerHTML = '♥';
+        btn.title = '取消收藏';
+      }
+    });
+  } catch(e) {}
+}
+
 
 // ============================================================
 // HERO CAROUSEL
@@ -3288,7 +3344,7 @@ function renderResourceCards(containerId, resources) {
         ${qualityHtml}
         <div class="overlay-actions">
           <button class="btn-icon" onclick="event.stopPropagation();copyToClipboard('${copyUrl}')" title="复制链接">⎘</button>
-          <button class="btn-icon" onclick="event.stopPropagation();showToast('已收藏','success')" title="收藏">♡</button>
+          <button class="btn-icon fav-btn" data-id="${r.id}" onclick="event.stopPropagation();toggleFavorite(this, ${r.id})" title="收藏">♡</button>
         </div>
       </div>
       <div class="card-body">
@@ -3439,7 +3495,7 @@ function renderSearchResults(results, total, hasMore) {
               </div>
               <div style="display:flex;gap:6px;flex-shrink:0">
                 <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();copyToClipboard('${(r.url||'').replace(/'/g,"\'")}')" style="font-size:.72rem;padding:4px 8px">复制</button>
-                <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toggleFavorite(this,'${clean}')" style="font-size:.72rem;padding:4px 8px">♡</button>
+                <button class="btn btn-ghost btn-sm" data-id="${r.id}" onclick="event.stopPropagation();toggleFavorite(this,${r.id})" style="font-size:.72rem;padding:4px 8px">♡</button>
                 ${isMagnet ? '' : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();window.open('${(r.url||'').replace(/'/g,"\'")}','_blank')" style="font-size:.72rem;padding:4px 8px">打开</button>`}
               </div>
             </div>
@@ -3550,6 +3606,7 @@ function loadSearchResults(q, page, isNew, appendOnly) {
       const items = (d.items || d.resources || []).map(it => {
         const src = detectSource(it.url) || it.source || '';
         return {
+          id: it.id,
           title: it.title || it.note || '',
           source: src,
           desc: [src, it.type, it.year].filter(Boolean).join(' · '),

@@ -842,6 +842,7 @@ async function loadUsers(){
     <td>
       <button class="btn btn-g btn-s" onclick="toggleUser(${u.id},${u.status})">${u.status===1?'禁用':'启用'}</button>
       ${u.github_id?`<button class="btn btn-g btn-s" onclick="unbindGitHub(${u.id})">解绑</button>`:`<button class="btn btn-p btn-s" onclick="bindGitHub(${u.id})">绑定</button>`}
+      ${u.role!=='admin'?`<button class="btn btn-r btn-s" onclick="deleteUser(${u.id})">删除</button>`:''}
     </td>
   </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px">暂无用户</td></tr>';
 }
@@ -869,6 +870,12 @@ async function unbindGitHub(uid){
   if(!confirm('确定解绑该用户的 GitHub 账号？')) return;
   const d=await api('/api/users/'+uid+'/github','POST',{github_id:null});
   if(d.ok||d.success){show('已解绑');loadUsers()}else show(d.error||'解绑失败','e');
+}
+
+async function deleteUser(uid){
+  if(!confirm('确定删除该用户？此操作不可恢复。')) return;
+  const d=await api('/api/users/'+uid,'DELETE');
+  if(d.ok||d.success){show('已删除');loadUsers()}else show(d.error||'删除失败','e');
 }
 
 async function loadImportQueue(){

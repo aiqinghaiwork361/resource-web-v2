@@ -729,6 +729,29 @@ def github_callback():
     if not github_id:
         return redirect("/login?error=oauth_no_id")
 
+    # 如果当前已登录，尝试绑定到当前账号
+    current_uid = session.get("user_id")
+    if current_uid:
+        db = get_db()
+        try:
+            cur = db.cursor()
+            cur.execute("SELECT id, username, role, status, github_id FROM users WHERE id=%s", (current_uid,))
+            current_user = cur.fetchone()
+            if current_user and not current_user.get("github_id"):
+                cur.execute("UPDATE users SET github_id=%s WHERE id=%s", (str(github_id), current_uid))
+                db.commit()
+                app.logger.info("用户 %s 绑定 GitHub ID %s", current_uid, github_id)
+                session["is_admin"] = current_user["role"] == "admin"
+                session["user_id"] = current_user["id"]
+                session["username"] = current_user["username"]
+                session.permanent = True
+                session.modified = True
+                return redirect("/admin" if current_user["role"] == "admin" else "/")
+        except Exception as e:
+            app.logger.warning("GitHub 绑定失败: %s", e)
+        finally:
+            db.close()
+
     user, error = _find_or_create_oauth_user(github_id, username, email)
     if error:
         return redirect(f"/login?error={error}")
@@ -1572,6 +1595,29 @@ def api_user_bind_github(uid):
                 "UPDATE users SET github_id=NULL WHERE id=%s",
                 (uid,),
             )
+        db.commit()
+        return jsonify({"ok": True})
+    finally:
+        db.close()
+
+
+@app.route("/api/user/bind_github", methods=["POST"])
+def api_user_bind_github_self():
+    """当前登录用户绑定自己的 GitHub 账号"""
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "未登录"}), 401
+    data = request.get_json() or {}
+    github_id = data.get("github_id")
+    if not github_id:
+        return jsonify({"error": "缺少 github_id"}), 400
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute(
+            "UPDATE users SET github_id=%s WHERE id=%s",
+            (str(github_id), uid),
+        )
         db.commit()
         return jsonify({"ok": True})
     finally:

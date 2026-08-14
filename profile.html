@@ -95,6 +95,7 @@
 <div class="container">
   <h1 class="page-title">我的收藏</h1>
   <p class="page-subtitle" id="userInfo">加载中...</p>
+  <div id="githubSection" style="margin-bottom:20px"></div>
   <div id="content">
     <div class="loading">加载中...</div>
   </div>
@@ -105,6 +106,7 @@
 <script>
 async function init() {
   await loadUserInfo();
+  await loadGitHubSection();
   await loadFavorites();
 }
 
@@ -121,6 +123,64 @@ async function loadUserInfo() {
     }
   } catch(e) {
     window.location.href = '/login';
+  }
+}
+
+async function loadGitHubSection() {
+  const container = document.getElementById('githubSection');
+  if (!container) return;
+  try {
+    const me = await fetch('/api/user/me').then(r => r.json());
+    if (!me.logged_in) return;
+    const r = await fetch('/api/users/' + me.user_id);
+    const d = await r.json();
+    const user = (d.items && d.items[0]) || d;
+    if (!user) return;
+    const githubId = user.github_id || '';
+    container.innerHTML = `
+      <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:.85rem;color:var(--text-secondary);margin-bottom:4px">GitHub 账号</div>
+          <div style="font-size:.9rem;font-weight:600">${githubId ? 'ID: ' + githubId : '未绑定'}</div>
+        </div>
+        ${githubId
+          ? `<button class="btn" onclick="unbindGitHubSelf()">解绑</button>`
+          : `<button class="btn btn-primary" onclick="bindGitHubSelf()">绑定 GitHub</button>`}
+      </div>
+    `;
+  } catch(e) {}
+}
+
+async function bindGitHubSelf() {
+  const id = prompt('输入你的 GitHub ID（数字）：');
+  if (!id) return;
+  const r = await fetch('/api/user/bind_github', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({github_id: id})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    showToast('绑定成功');
+    loadGitHubSection();
+  } else {
+    showToast(d.error || '绑定失败', 'error');
+  }
+}
+
+async function unbindGitHubSelf() {
+  if (!confirm('确定解绑你的 GitHub 账号？')) return;
+  const r = await fetch('/api/user/bind_github', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({github_id: null})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    showToast('已解绑');
+    loadGitHubSection();
+  } else {
+    showToast(d.error || '解绑失败', 'error');
   }
 }
 
