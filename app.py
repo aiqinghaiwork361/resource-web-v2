@@ -109,6 +109,8 @@ def verify_password(password: str, stored_hash: str) -> bool:
 
 app = Flask(__name__)
 # secret_key 在 _get_setting() 定义后设置（见下方）
+# 与 :5001 生产站隔离 Cookie，避免同主机登录会话互相覆盖
+app.config['SESSION_COOKIE_NAME'] = os.environ.get('SESSION_COOKIE_NAME', 'session')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
@@ -593,6 +595,11 @@ def login_page():
                 app.logger.warning("bcrypt 迁移失败 user_id=%s: %s", user["id"], e)
             finally:
                 db2.close()
+        # 纯内测：不在必加群一律不能登录（含管理员密码；超管 TG 可兜底）
+        if _telegram_required_chat():
+            ok_gate, gate_msg = _user_pass_internal_beta_gate(user_id=user["id"], role=user.get("role"))
+            if not ok_gate:
+                return jsonify({"ok": False, "error": gate_msg}), 403
         session["is_admin"] = user["role"] == "admin"
         session["user_id"] = user["id"]
         session["username"] = user["username"]
@@ -624,6 +631,46 @@ GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET", "")
 GITHUB_AUTHORIZATION_BASE_URL = "https://github.com/login/oauth/authorize"
 GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 GITHUB_API_URL = "https://api.github.com/user"
+
+
+def _oauth_http_proxies():
+    """容器直连 github.com 常超时；走本机代理（可用 HTTPS_PROXY / GITHUB_HTTP_PROXY）"""
+    proxy = (
+        os.environ.get("GITHUB_HTTP_PROXY")
+        or os.environ.get("HTTPS_PROXY")
+        or os.environ.get("https_proxy")
+        or os.environ.get("HTTP_PROXY")
+        or os.environ.get("http_proxy")
+        or ""
+    ).strip()
+    if not proxy:
+        return None
+    return {"http": proxy, "https": proxy}
+
+
+def _oauth_serializer():
+    from itsdangerous import URLSafeTimedSerializer
+    return URLSafeTimedSerializer(app.secret_key, salt="github-oauth-v1")
+
+
+def _pack_oauth_state(next_url="/", bind=False, uid=None):
+    """把 bind/next/uid 打进 state，避免内网开绑 → 公网回调丢 session"""
+    return _oauth_serializer().dumps({
+        "n": secrets.token_urlsafe(12),
+        "next": next_url or "/",
+        "bind": bool(bind),
+        "uid": uid,
+    })
+
+
+def _unpack_oauth_state(state, max_age=600):
+    from itsdangerous import BadSignature, SignatureExpired
+    if not state:
+        return None
+    try:
+        return _oauth_serializer().loads(state, max_age=max_age)
+    except (BadSignature, SignatureExpired, Exception):
+        return None
 
 
 def _get_oauth_github():
@@ -660,7 +707,15 @@ def _find_or_create_oauth_user(github_id, username, email):
         if user:
             if user.get("status") != 1:
                 return None, "账号已被禁用"
+            # 已有 GitHub 账号也必须过群门禁
+            ok_gate, gate_msg = _user_pass_internal_beta_gate(user_id=user["id"], role=user.get("role"))
+            if not ok_gate:
+                return None, gate_msg
             return user, None
+
+        # 开启必加群后，禁止仅用 GitHub 自动注册（须 Telegram 入群登录）
+        if _telegram_required_chat():
+            return None, "纯内测：请使用 Telegram 登录（需加入指定群组后自动开户）"
 
         display_name = username or f"github_{github_id}"
         safe_email = (email or "").strip() or None
@@ -679,18 +734,935 @@ def _find_or_create_oauth_user(github_id, username, email):
         db.close()
 
 
-@app.route("/login/github")
-def login_github():
+# ==================== Telegram Login Widget ====================
+TELEGRAM_AUTH_MAX_AGE = int(os.environ.get("TELEGRAM_AUTH_MAX_AGE", "86400"))
+# 硬编码兜底超管 TG ID；后台 settings.telegram_superadmin_ids 可追加（逗号分隔）
+_DEFAULT_TG_SUPERADMINS = {"1562902842"}
+
+
+def _setting_db(key, default=None):
+    """只读 settings 表（不读环境变量）"""
+    try:
+        db = get_db()
+        try:
+            cur = db.cursor()
+            cur.execute("SELECT `value` FROM settings WHERE `key`=%s", (key.lower(),))
+            row = cur.fetchone()
+            if row and row.get("value") is not None and str(row.get("value")).strip() != "":
+                return row["value"]
+        finally:
+            db.close()
+    except Exception:
+        pass
+    return default
+
+
+def _upsert_setting(key, value, description=None):
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute("SELECT `key` FROM settings WHERE `key`=%s", (key,))
+        if cur.fetchone():
+            cur.execute("UPDATE settings SET value=%s WHERE `key`=%s", (str(value), key))
+        else:
+            cur.execute(
+                "INSERT INTO settings (`key`, value, description) VALUES (%s, %s, %s)",
+                (key, str(value), description or ""),
+            )
+        db.commit()
+    finally:
+        db.close()
+
+
+def _telegram_bot_token():
+    """优先后台 settings，其次环境变量"""
+    v = (_setting_db("telegram_bot_token") or os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
+    return v
+
+
+def _telegram_bot_username():
+    v = (_setting_db("telegram_bot_username") or os.environ.get("TELEGRAM_BOT_USERNAME") or "").strip().lstrip("@")
+    return v
+
+
+def _telegram_superadmin_ids():
+    ids = set(_DEFAULT_TG_SUPERADMINS)
+    extra = (_setting_db("telegram_superadmin_ids") or os.environ.get("TELEGRAM_SUPERADMIN_IDS") or "").strip()
+    if extra:
+        for part in re.split(r"[\s,;]+", extra):
+            if part:
+                ids.add(part.strip())
+    return ids
+
+
+def _mask_secret(val: str) -> str:
+    if not val:
+        return ""
+    s = str(val)
+    if len(s) <= 10:
+        return "*" * len(s)
+    return s[:6] + "…" + s[-4:]
+
+
+def _ensure_telegram_id_column():
+    """幂等：确保 users.telegram_id 存在"""
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute("SHOW COLUMNS FROM users LIKE 'telegram_id'")
+        if not cur.fetchone():
+            cur.execute(
+                "ALTER TABLE users ADD COLUMN telegram_id VARCHAR(64) NULL UNIQUE AFTER github_id"
+            )
+            db.commit()
+    except Exception as e:
+        app.logger.warning("ensure telegram_id column: %s", e)
+    finally:
+        db.close()
+
+
+def _ensure_telegram_settings_keys():
+    """确保后台可编辑的 TG 登录相关 settings 键存在"""
+    defaults = [
+        ("telegram_bot_token", "", "Telegram Login 用 Bot API Token"),
+        ("telegram_bot_username", "", "Telegram Login 用 Bot 用户名（不含@）"),
+        ("telegram_superadmin_ids", "1562902842", "Telegram 超管 ID，逗号分隔"),
+        ("telegram_required_chat", "@heikuangchangshare", "仅该群成员可登录/注册（@群用户名或 -100 数字 ID；空=不限制）"),
+    ]
+    db = get_db()
+    try:
+        cur = db.cursor()
+        for k, v, desc in defaults:
+            cur.execute("SELECT `key` FROM settings WHERE `key`=%s", (k,))
+            if not cur.fetchone():
+                cur.execute(
+                    "INSERT INTO settings (`key`, value, description) VALUES (%s, %s, %s)",
+                    (k, v, desc),
+                )
+        db.commit()
+    except Exception as e:
+        app.logger.warning("ensure telegram settings: %s", e)
+    finally:
+        db.close()
+
+
+def _telegram_required_chat():
+    """必加群：settings > env > 默认矿场群；off/0/false/none/- 关闭"""
+    try:
+        v = (_setting_db("telegram_required_chat") or os.environ.get("TELEGRAM_REQUIRED_CHAT") or "@heikuangchangshare").strip()
+    except Exception:
+        v = (os.environ.get("TELEGRAM_REQUIRED_CHAT") or "@heikuangchangshare").strip()
+    if v.lower() in ("off", "0", "false", "none", "-", "disable", "disabled"):
+        return ""
+    if "t.me/" in v:
+        v = v.rstrip("/").split("/")[-1]
+    if v and not v.startswith("@") and not v.lstrip("-").isdigit():
+        v = "@" + v
+    return v
+
+
+def _telegram_user_in_required_group(telegram_id) -> tuple[bool, str]:
+    """校验 TG 用户是否在必加群。未配置必加群时直接放行。
+    返回 (ok, detail) detail 为 status 或错误说明。
+    """
+    chat = _telegram_required_chat()
+    if not chat:
+        return True, "disabled"
+    tg_id = str(telegram_id or "").strip()
+    if not tg_id:
+        return False, "缺少 Telegram ID"
+    # 超管仍建议在群里，但允许兜底以免把自己锁死
+    if tg_id in _telegram_superadmin_ids():
+        return True, "superadmin"
+    if not _telegram_bot_token():
+        return False, "未配置 Bot Token，无法校验群成员"
+    try:
+        member = _telegram_api("getChatMember", {
+            "chat_id": chat,
+            "user_id": int(tg_id),
+        })
+    except Exception as e:
+        err = str(e)
+        app.logger.warning("getChatMember failed chat=%s user=%s: %s", chat, tg_id, err)
+        low = err.lower()
+        if "participant_id_invalid" in low or "user not found" in low:
+            return False, "not_member"
+        if "chat not found" in low:
+            return False, "群不存在或 Bot 未入群"
+        return False, f"无法校验群成员（Bot 需为群管理员）: {err}"
+    status = (member or {}).get("status") or ""
+    # restricted 也可能仍在群内
+    if status == "restricted" and member.get("is_member") is False:
+        return False, "restricted"
+    if status in ("creator", "administrator", "member", "restricted"):
+        return True, status
+    return False, status or "not_member"
+
+
+def _telegram_group_gate(telegram_id) -> tuple[bool, str]:
+    """统一门禁文案"""
+    ok, detail = _telegram_user_in_required_group(telegram_id)
+    if ok:
+        return True, ""
+    chat = _telegram_required_chat() or "@heikuangchangshare"
+    link = chat if chat.startswith("http") else f"https://t.me/{chat.lstrip('@')}"
+    return False, f"纯内测：仅限群组成员。请先加入 {link} 后再试（当前状态: {detail}）"
+
+
+def _user_pass_internal_beta_gate(user_id=None, telegram_id=None, role=None) -> tuple[bool, str]:
+    """纯内测总闸：开启必加群后，任何人登录都必须证明在群内（超管 TG 可兜底）。
+    无 telegram_id 一律拒绝（请用 Telegram 登录）。
+    """
+    if not _telegram_required_chat():
+        return True, ""
+    tg_id = str(telegram_id or "").strip() or None
+    if not tg_id and user_id:
+        db = get_db()
+        try:
+            cur = db.cursor()
+            cur.execute("SELECT telegram_id, role FROM users WHERE id=%s", (user_id,))
+            row = cur.fetchone() or {}
+            tg_id = row.get("telegram_id")
+            if role is None:
+                role = row.get("role")
+        finally:
+            db.close()
+    if not tg_id:
+        chat = _telegram_required_chat()
+        link = chat if chat.startswith("http") else f"https://t.me/{chat.lstrip('@')}"
+        return False, f"纯内测：请使用 Telegram 登录，并先加入 {link}"
+    return _telegram_group_gate(tg_id)
+
+
+def _verify_telegram_login(data: dict) -> tuple[bool, str]:
+    """校验 Telegram Login Widget 返回的 hash。
+    文档: https://core.telegram.org/widgets/login#checking-authorization
+    """
+    token = _telegram_bot_token()
+    if not token:
+        return False, "服务端未配置 Telegram Bot Token（请在后台系统设置添加）"
+    recv_hash = (data.get("hash") or "").strip()
+    if not recv_hash:
+        return False, "缺少 hash"
+    try:
+        auth_date = int(data.get("auth_date") or 0)
+    except (TypeError, ValueError):
+        return False, "auth_date 无效"
+    if not auth_date:
+        return False, "缺少 auth_date"
+    if TELEGRAM_AUTH_MAX_AGE > 0 and (time.time() - auth_date) > TELEGRAM_AUTH_MAX_AGE:
+        return False, "登录信息已过期，请重试"
+
+    check_fields = []
+    for key in sorted(k for k in data.keys() if k != "hash"):
+        val = data.get(key)
+        if val is None or val == "":
+            continue
+        check_fields.append(f"{key}={val}")
+    data_check_string = "\n".join(check_fields)
+    secret_key = hashlib.sha256(token.encode("utf-8")).digest()
+    import hmac as _hmac
+
+    calc = _hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+    if not _hmac.compare_digest(calc, recv_hash):
+        return False, "Telegram 签名校验失败"
+    return True, ""
+
+
+def _promote_telegram_superadmin(cur, user, telegram_id):
+    """超管 TG ID 强制 role=admin"""
+    if str(telegram_id) not in _telegram_superadmin_ids():
+        return user
+    if user.get("role") != "admin":
+        cur.execute("UPDATE users SET role='admin' WHERE id=%s", (user["id"],))
+        user = dict(user)
+        user["role"] = "admin"
+    return user
+
+
+def _find_or_create_telegram_user(telegram_id, username, first_name, last_name):
+    """通过 telegram_id 查找或自动创建用户；超管名单自动升为 admin；需通过必加群门禁"""
+    tg_id = str(telegram_id)
+    ok_gate, gate_msg = _telegram_group_gate(tg_id)
+    if not ok_gate:
+        return None, gate_msg
+    is_super = tg_id in _telegram_superadmin_ids()
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute(
+            "SELECT id, username, role, status FROM users WHERE telegram_id=%s",
+            (tg_id,),
+        )
+        user = cur.fetchone()
+        if not user:
+            # 兼容：老账号 username 直接等于 TG 数字 ID
+            cur.execute(
+                "SELECT id, username, role, status, telegram_id FROM users WHERE username=%s",
+                (tg_id,),
+            )
+            legacy = cur.fetchone()
+            if legacy:
+                if not legacy.get("telegram_id"):
+                    cur.execute(
+                        "UPDATE users SET telegram_id=%s WHERE id=%s",
+                        (tg_id, legacy["id"]),
+                    )
+                user = {
+                    "id": legacy["id"],
+                    "username": legacy["username"],
+                    "role": legacy["role"],
+                    "status": legacy["status"],
+                }
+
+        if user:
+            if user.get("status") != 1:
+                return None, "账号已被禁用"
+            user = _promote_telegram_superadmin(cur, user, tg_id)
+            db.commit()
+            return user, None
+
+        display = (username or "").strip()
+        if not display:
+            parts = [p for p in [(first_name or "").strip(), (last_name or "").strip()] if p]
+            display = " ".join(parts) or f"tg_{tg_id}"
+        base = display[:80]
+        candidate = base
+        n = 1
+        while True:
+            cur.execute("SELECT id FROM users WHERE username=%s", (candidate,))
+            if not cur.fetchone():
+                break
+            n += 1
+            candidate = f"{base}_{n}"[:100]
+
+        role = "admin" if is_super else "user"
+        cur.execute(
+            "INSERT INTO users (username, email, role, status, telegram_id) VALUES (%s, %s, %s, %s, %s)",
+            (candidate, None, role, 1, tg_id),
+        )
+        db.commit()
+        cur.execute(
+            "SELECT id, username, role, status FROM users WHERE telegram_id=%s",
+            (tg_id,),
+        )
+        return cur.fetchone(), None
+    except pymysql.err.IntegrityError as e:
+        return None, f"创建用户失败: {e}"
+    finally:
+        db.close()
+
+
+def _session_login_user(user):
+    session["is_admin"] = user["role"] == "admin"
+    session["user_id"] = user["id"]
+    session["username"] = user["username"]
+    session.permanent = True
+    session.modified = True
+    db2 = get_db()
+    try:
+        db2.cursor().execute("UPDATE users SET last_login=NOW() WHERE id=%s", (user["id"],))
+        db2.commit()
+    finally:
+        db2.close()
+
+
+@app.route("/api/telegram/login-config")
+def api_telegram_login_config():
+    """前端拉 Bot 用户名；未配置则 enabled=false"""
+    _ensure_telegram_settings_keys()
+    token = _telegram_bot_token()
+    bot_username = _telegram_bot_username()
+    enabled = bool(token and bot_username)
+    chat = _telegram_required_chat()
+    chat_link = ""
+    if chat:
+        chat_link = chat if chat.startswith("http") else f"https://t.me/{chat.lstrip('@')}"
+    return jsonify({
+        "enabled": enabled,
+        "bot_username": bot_username or "",
+        "required_chat": chat,
+        "required_chat_link": chat_link,
+        "hint": "" if enabled else "请管理员在后台「系统设置」填写 Telegram Bot Token 与 Bot 用户名，并在 BotFather /setdomain",
+    })
+
+
+@app.route("/login/telegram", methods=["POST"])
+def login_telegram():
+    """Telegram Login Widget → JSON POST 登录"""
+    _ensure_telegram_id_column()
+    _ensure_telegram_settings_keys()
+    if not _telegram_bot_token():
+        return jsonify({"ok": False, "error": "服务端未配置 Telegram 登录"}), 500
+
+    data = request.get_json(silent=True) or {}
+    payload = {
+        "id": data.get("id"),
+        "first_name": data.get("first_name"),
+        "last_name": data.get("last_name"),
+        "username": data.get("username"),
+        "photo_url": data.get("photo_url"),
+        "auth_date": data.get("auth_date"),
+        "hash": data.get("hash"),
+    }
+    payload = {k: v for k, v in payload.items() if v is not None and v != ""}
+
+    ok, err = _verify_telegram_login(payload)
+    if not ok:
+        return jsonify({"ok": False, "error": err}), 401
+
+    tg_id = payload.get("id")
+    if not tg_id:
+        return jsonify({"ok": False, "error": "缺少 Telegram id"}), 400
+
+    ok_gate, gate_msg = _telegram_group_gate(tg_id)
+    if not ok_gate:
+        return jsonify({"ok": False, "error": gate_msg}), 403
+
+    current_uid = session.get("user_id")
+    if current_uid:
+        db = get_db()
+        try:
+            cur = db.cursor()
+            cur.execute(
+                "SELECT id, username, role, status, telegram_id FROM users WHERE id=%s",
+                (current_uid,),
+            )
+            current_user = cur.fetchone()
+            if current_user and not current_user.get("telegram_id"):
+                cur.execute(
+                    "SELECT id FROM users WHERE telegram_id=%s AND id!=%s",
+                    (str(tg_id), current_uid),
+                )
+                if cur.fetchone():
+                    return jsonify({"ok": False, "error": "该 Telegram 已绑定其他账号"}), 409
+                cur.execute(
+                    "UPDATE users SET telegram_id=%s WHERE id=%s",
+                    (str(tg_id), current_uid),
+                )
+                current_user = _promote_telegram_superadmin(cur, current_user, tg_id)
+                db.commit()
+                _session_login_user(current_user)
+                return jsonify({"ok": True, "role": current_user["role"], "bound": True})
+        finally:
+            db.close()
+
+    user, error = _find_or_create_telegram_user(
+        tg_id,
+        payload.get("username"),
+        payload.get("first_name"),
+        payload.get("last_name"),
+    )
+    if error:
+        return jsonify({"ok": False, "error": error}), 403 if "禁用" in error else 400
+    if not user:
+        return jsonify({"ok": False, "error": "登录失败"}), 500
+
+    _session_login_user(user)
+    return jsonify({"ok": True, "role": user["role"], "username": user["username"]})
+
+
+@app.route("/login/telegram/callback")
+@csrf.exempt
+def login_telegram_callback():
+    """data-auth-url 回调（query 参数）；校验后写 session 并跳转"""
+    _ensure_telegram_id_column()
+    payload = {k: request.args.get(k) for k in (
+        "id", "first_name", "last_name", "username", "photo_url", "auth_date", "hash"
+    ) if request.args.get(k) is not None}
+    ok, err = _verify_telegram_login(payload)
+    if not ok:
+        return redirect(f"/login?error=tg_{err}")
+    user, error = _find_or_create_telegram_user(
+        payload.get("id"),
+        payload.get("username"),
+        payload.get("first_name"),
+        payload.get("last_name"),
+    )
+    if error or not user:
+        return redirect(f"/login?error=tg_{error or 'fail'}")
+    _session_login_user(user)
+    return redirect("/admin" if user["role"] == "admin" else "/")
+
+
+# ==================== Telegram Bot 绑定（深链 /start bind_xxx） ====================
+TG_BIND_TTL = 600  # 绑定码 10 分钟
+TG_BIND_PREFIX = "tg_bind:"
+TG_LOGIN_TTL = 600
+TG_LOGIN_PREFIX = "tg_login:"
+
+
+def _telegram_webhook_secret():
+    raw = (os.environ.get("TELEGRAM_WEBHOOK_SECRET") or "").strip()
+    if raw:
+        return raw
+    # 稳定派生，避免明文 token 进 URL
+    material = f"{app.secret_key or 'vault'}:tg-webhook"
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()[:32]
+
+
+def _telegram_api(method, payload=None, timeout=20):
+    """调用 Bot API；优先直连，失败再走代理（api.telegram.org 在部分网络不稳定）"""
+    token = _telegram_bot_token()
+    if not token:
+        raise RuntimeError("未配置 TELEGRAM_BOT_TOKEN")
+    url = f"https://api.telegram.org/bot{token}/{method}"
+    proxies_list = [None]
+    p = _oauth_http_proxies()
+    if p:
+        proxies_list.append(p)
+    last_err = None
+    for proxies in proxies_list:
+        for attempt in range(2):
+            try:
+                r = http_requests.post(
+                    url,
+                    json=payload or {},
+                    timeout=timeout,
+                    proxies=proxies,
+                )
+                data = r.json() if r.content else {}
+                if not data.get("ok"):
+                    raise RuntimeError(data.get("description") or f"Telegram API {method} failed: {r.status_code}")
+                return data.get("result")
+            except Exception as e:
+                last_err = e
+                time.sleep(0.4 * (attempt + 1))
+    raise RuntimeError(str(last_err) if last_err else f"Telegram API {method} failed")
+
+
+def _telegram_api_proxies():
+    return _oauth_http_proxies()
+
+
+def _telegram_webhook_base():
+    """公网基址：优先 TELEGRAM_WEBHOOK_BASE，否则从 GITHUB_REDIRECT_URI 推断"""
+    base = (os.environ.get("TELEGRAM_WEBHOOK_BASE") or "").strip().rstrip("/")
+    if base:
+        return base
+    redir = (os.environ.get("GITHUB_REDIRECT_URI") or "").strip()
+    if redir:
+        from urllib.parse import urlparse
+        p = urlparse(redir)
+        if p.scheme and p.netloc:
+            return f"{p.scheme}://{p.netloc}"
+    return ""
+
+
+def _ensure_telegram_webhook():
+    """幂等设置 webhook（Redis 标记，避免每次请求打 TG）"""
+    base = _telegram_webhook_base()
+    if not base or not _telegram_bot_token():
+        return False, "未配置公网域名或 Bot Token"
+    r = get_redis()
+    cache_key = "tg_webhook:ready"
+    if r is not None:
+        try:
+            cached = r.get(cache_key)
+            if isinstance(cached, bytes):
+                cached = cached.decode()
+            if cached == base:
+                return True, "cached"
+        except Exception:
+            pass
+    secret = _telegram_webhook_secret()
+    hook = f"{base}/api/telegram/bot-webhook/{secret}"
+    try:
+        _telegram_api("setWebhook", {
+            "url": hook,
+            "allowed_updates": ["message"],
+            "drop_pending_updates": False,
+        })
+        if r is not None:
+            try:
+                r.setex(cache_key, 86400, base)
+            except Exception:
+                pass
+        app.logger.info("Telegram webhook set: %s", hook)
+        return True, hook
+    except Exception as e:
+        app.logger.warning("setWebhook failed: %s", e)
+        return False, str(e)
+
+
+def _tg_bind_store(code, user_id):
+    r = get_redis()
+    if r is None:
+        raise RuntimeError("Redis 不可用，无法生成绑定码")
+    r.setex(TG_BIND_PREFIX + code, TG_BIND_TTL, str(user_id))
+
+
+def _tg_bind_pop(code):
+    r = get_redis()
+    if r is None:
+        return None
+    key = TG_BIND_PREFIX + code
+    uid = r.get(key)
+    if uid is not None:
+        r.delete(key)
+        if isinstance(uid, bytes):
+            uid = uid.decode()
+        try:
+            return int(uid)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _bind_telegram_to_user(user_id, telegram_id):
+    """把 telegram_id 绑到指定用户；冲突返回 (False, msg)"""
+    _ensure_telegram_id_column()
+    tg_id = str(telegram_id)
+    ok_gate, gate_msg = _telegram_group_gate(tg_id)
+    if not ok_gate:
+        return False, gate_msg
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute("SELECT id, username, role, status, telegram_id FROM users WHERE id=%s", (user_id,))
+        user = cur.fetchone()
+        if not user:
+            return False, "用户不存在"
+        if user.get("status") != 1:
+            return False, "账号已被禁用"
+        if user.get("telegram_id") and str(user.get("telegram_id")) != tg_id:
+            return False, "该账号已绑定其他 Telegram"
+        if user.get("telegram_id") and str(user.get("telegram_id")) == tg_id:
+            return True, "already"
+        cur.execute(
+            "SELECT id, username FROM users WHERE telegram_id=%s AND id<>%s",
+            (tg_id, user_id),
+        )
+        taken = cur.fetchone()
+        if taken:
+            return False, "该 Telegram 已绑定其他账号"
+        cur.execute("UPDATE users SET telegram_id=%s WHERE id=%s", (tg_id, user_id))
+        user = _promote_telegram_superadmin(cur, user, tg_id)
+        db.commit()
+        return True, "bound"
+    finally:
+        db.close()
+
+
+@app.route("/api/user/telegram/bind-code", methods=["POST"])
+def api_telegram_bind_code():
+    """登录用户生成 Bot 深链绑定码"""
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "未登录"}), 401
+    if not _telegram_bot_token() or not _telegram_bot_username():
+        return jsonify({"error": "服务端未配置 Telegram Bot"}), 500
+
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute("SELECT telegram_id FROM users WHERE id=%s", (uid,))
+        row = cur.fetchone()
+        if row and row.get("telegram_id"):
+            return jsonify({"error": "已绑定 Telegram，请先解绑", "telegram_id": row["telegram_id"]}), 400
+    finally:
+        db.close()
+
+    ok, info = _ensure_telegram_webhook()
+    if not ok:
+        return jsonify({"error": f"Webhook 未就绪: {info}"}), 503
+
+    code = secrets.token_urlsafe(9).replace("-", "").replace("_", "")[:12]
+    try:
+        _tg_bind_store(code, uid)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    bot = _telegram_bot_username()
+    deep_link = f"https://t.me/{bot}?start=bind_{code}"
+    return jsonify({
+        "ok": True,
+        "code": code,
+        "deep_link": deep_link,
+        "bot_username": bot,
+        "expires_in": TG_BIND_TTL,
+        "hint": f"打开 Bot 后发送 /start bind_{code}，或点击下方链接一键绑定",
+    })
+
+
+@app.route("/api/user/telegram/unbind", methods=["POST"])
+def api_telegram_unbind():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "未登录"}), 401
+    _ensure_telegram_id_column()
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute("UPDATE users SET telegram_id=NULL WHERE id=%s", (uid,))
+        db.commit()
+        return jsonify({"ok": True})
+    finally:
+        db.close()
+
+
+def _tg_login_store_pending(code):
+    r = get_redis()
+    if r is None:
+        raise RuntimeError("Redis 不可用")
+    r.setex(TG_LOGIN_PREFIX + code, TG_LOGIN_TTL, json.dumps({"status": "pending"}))
+
+
+def _tg_login_mark_ready(code, tg_user):
+    r = get_redis()
+    if r is None:
+        return False
+    key = TG_LOGIN_PREFIX + code
+    if not r.exists(key):
+        return False
+    r.setex(key, TG_LOGIN_TTL, json.dumps({
+        "status": "ready",
+        "tg_id": str(tg_user.get("id") or ""),
+        "username": tg_user.get("username") or "",
+        "first_name": tg_user.get("first_name") or "",
+        "last_name": tg_user.get("last_name") or "",
+    }, ensure_ascii=False))
+    return True
+
+
+def _tg_login_get(code):
+    r = get_redis()
+    if r is None:
+        return None
+    raw = r.get(TG_LOGIN_PREFIX + code)
+    if not raw:
+        return None
+    if isinstance(raw, bytes):
+        raw = raw.decode()
+    try:
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
+def _tg_login_consume(code):
+    r = get_redis()
+    if r is None:
+        return None
+    key = TG_LOGIN_PREFIX + code
+    raw = r.get(key)
+    if not raw:
+        return None
+    r.delete(key)
+    if isinstance(raw, bytes):
+        raw = raw.decode()
+    try:
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
+@app.route("/api/auth/telegram/login-code", methods=["POST"])
+def api_telegram_login_code():
+    """未登录：生成 Bot 深链登录码（打开 Bot 确认后网页轮询完成登录）"""
+    if session.get("user_id"):
+        return jsonify({"ok": True, "already": True, "redirect": "/"}), 200
+    if not _telegram_bot_token() or not _telegram_bot_username():
+        return jsonify({"error": "服务端未配置 Telegram Bot"}), 500
+    ok, info = _ensure_telegram_webhook()
+    if not ok:
+        return jsonify({"error": f"Webhook 未就绪: {info}"}), 503
+    code = secrets.token_urlsafe(9).replace("-", "").replace("_", "")[:12]
+    try:
+        _tg_login_store_pending(code)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    bot = _telegram_bot_username()
+    return jsonify({
+        "ok": True,
+        "code": code,
+        "deep_link": f"https://t.me/{bot}?start=login_{code}",
+        "bot_username": bot,
+        "expires_in": TG_LOGIN_TTL,
+    })
+
+
+@app.route("/api/auth/telegram/login-poll")
+def api_telegram_login_poll():
+    code = re.sub(r"[^A-Za-z0-9]", "", (request.args.get("code") or ""))
+    if not code:
+        return jsonify({"status": "invalid"}), 400
+    data = _tg_login_get(code)
+    if not data:
+        return jsonify({"status": "expired"})
+    return jsonify({"status": data.get("status") or "pending"})
+
+
+@app.route("/api/auth/telegram/login-complete", methods=["POST"])
+def api_telegram_login_complete():
+    """轮询到 ready 后调用，写入 session"""
+    body = request.get_json(silent=True) or {}
+    code = re.sub(r"[^A-Za-z0-9]", "", str(body.get("code") or ""))
+    if not code:
+        return jsonify({"ok": False, "error": "缺少 code"}), 400
+    data = _tg_login_consume(code)
+    if not data or data.get("status") != "ready" or not data.get("tg_id"):
+        return jsonify({"ok": False, "error": "登录码无效或未确认"}), 400
+    user, error = _find_or_create_telegram_user(
+        data.get("tg_id"),
+        data.get("username"),
+        data.get("first_name"),
+        data.get("last_name"),
+    )
+    if error or not user:
+        return jsonify({"ok": False, "error": error or "登录失败"}), 403 if error and "禁用" in str(error) else 400
+    _session_login_user(user)
+    return jsonify({"ok": True, "role": user["role"], "username": user["username"]})
+
+
+@app.route("/api/telegram/bot-webhook/<secret>", methods=["POST"])
+@csrf.exempt
+def api_telegram_bot_webhook(secret):
+    """Bot 更新：/start bind_xxx 绑定；/start login_xxx 登录确认"""
+    if secret != _telegram_webhook_secret():
+        return jsonify({"ok": False}), 403
+    update = request.get_json(silent=True) or {}
+    msg = update.get("message") or update.get("edited_message") or {}
+    chat = msg.get("chat") or {}
+    chat_id = chat.get("id")
+    from_user = msg.get("from") or {}
+    text = (msg.get("text") or "").strip()
+    if not chat_id or not text:
+        return jsonify({"ok": True})
+
+    action = None  # bind | login
+    code = None
+    lower = text.lower()
+    if lower.startswith("/start"):
+        parts = text.split(maxsplit=1)
+        payload = parts[1].strip() if len(parts) > 1 else ""
+        pl = payload.lower()
+        if pl.startswith("bind_"):
+            action, code = "bind", payload[5:].strip()
+        elif pl.startswith("bind"):
+            action, code = "bind", payload[4:].lstrip("_").strip()
+        elif pl.startswith("login_"):
+            action, code = "login", payload[6:].strip()
+        elif pl.startswith("login"):
+            action, code = "login", payload[5:].lstrip("_").strip()
+    elif lower.startswith("/bind"):
+        parts = text.split(maxsplit=1)
+        action, code = "bind", (parts[1].strip() if len(parts) > 1 else "")
+    elif lower.startswith("/login"):
+        parts = text.split(maxsplit=1)
+        action, code = "login", (parts[1].strip() if len(parts) > 1 else "")
+
+    def _reply(body):
+        try:
+            _telegram_api("sendMessage", {
+                "chat_id": chat_id,
+                "text": body,
+                "disable_web_page_preview": True,
+            })
+        except Exception as e:
+            app.logger.warning("TG sendMessage failed: %s", e)
+
+    if not action or not code:
+        if lower.startswith("/start") or lower.startswith("/bind") or lower.startswith("/login") or lower in ("/help", "help"):
+            bot = _telegram_bot_username() or "vaultdrive_bot"
+            _reply(
+                "VaultDrive 助手\n\n"
+                "• 登录：在网站点「Telegram 登录」后打开本 Bot\n"
+                "• 绑定：在「我的收藏」生成链接后打开\n\n"
+                f"Bot: @{bot}"
+            )
+        return jsonify({"ok": True})
+
+    code = re.sub(r"[^A-Za-z0-9]", "", code)
+    if not code:
+        _reply("码无效，请回网站重新操作。")
+        return jsonify({"ok": True})
+
+    tg_id = from_user.get("id")
+    if not tg_id:
+        _reply("无法读取你的 Telegram ID。")
+        return jsonify({"ok": True})
+
+    if action == "login":
+        ok_gate, gate_msg = _telegram_group_gate(tg_id)
+        if not ok_gate:
+            _reply(gate_msg)
+            return jsonify({"ok": True})
+        if not _tg_login_mark_ready(code, from_user):
+            _reply("登录码无效或已过期，请回网站重新点击登录。")
+            return jsonify({"ok": True})
+        uname = from_user.get("username") or from_user.get("first_name") or ""
+        _reply(
+            "登录确认成功 ✅\n"
+            f"Telegram ID: {tg_id}"
+            + (f"\n@{uname}" if from_user.get("username") else "")
+            + "\n\n请回到网页，会自动完成登录。"
+        )
+        return jsonify({"ok": True})
+
+    # bind
+    uid = _tg_bind_pop(code)
+    if not uid:
+        _reply("绑定码无效或已过期，请回网站重新生成后重试。")
+        return jsonify({"ok": True})
+
+    ok, status = _bind_telegram_to_user(uid, tg_id)
+    if not ok:
+        _reply(f"绑定失败：{status}")
+        return jsonify({"ok": True})
+
+    uname = from_user.get("username") or from_user.get("first_name") or ""
+    if status == "already":
+        _reply(f"已经绑定过了 ✅\nTelegram ID: {tg_id}" + (f"\n@{uname}" if uname else ""))
+    else:
+        _reply(
+            f"绑定成功 ✅\n"
+            f"Telegram ID: {tg_id}"
+            + (f"\n@{uname}" if from_user.get("username") else "")
+            + "\n\n可回网站「我的收藏」查看。"
+        )
+    return jsonify({"ok": True})
+
+
+@app.route("/api/admin/telegram/webhook", methods=["POST"])
+@admin_required
+def api_admin_telegram_webhook():
+    """管理员手动刷新 webhook"""
+    r = get_redis()
+    if r is not None:
+        try:
+            r.delete("tg_webhook:ready")
+        except Exception:
+            pass
+    ok, info = _ensure_telegram_webhook()
+    return jsonify({"ok": ok, "info": info, "base": _telegram_webhook_base()})
     if not GITHUB_CLIENT_ID or not GITHUB_CLIENT_SECRET:
         return jsonify({"error": "服务端未配置 GitHub OAuth"}), 500
+    # next=/profile 等站内路径；bind=1 表示给当前登录用户绑定，不要切号
+    next_url = (request.args.get("next") or "").strip()
+    if not (next_url.startswith("/") and not next_url.startswith("//")):
+        next_url = "/"
+    oauth_bind = request.args.get("bind") in ("1", "true", "yes")
+    session["oauth_next"] = next_url
+    if oauth_bind:
+        session["oauth_bind"] = True
+    # state 自带 bind/uid/next，公网回调即使丢 cookie 也能绑定
+    state = _pack_oauth_state(
+        next_url=next_url,
+        bind=oauth_bind,
+        uid=session.get("user_id"),
+    )
+    session["oauth_state"] = state
     redirect_uri = _build_oauth_redirect_uri()
     github = OAuth2Session(
         GITHUB_CLIENT_ID,
         redirect_uri=redirect_uri,
         scope=["user:email"],
     )
-    authorization_url, state = github.authorization_url(GITHUB_AUTHORIZATION_BASE_URL)
-    session["oauth_state"] = state
+    authorization_url, _ = github.authorization_url(
+        GITHUB_AUTHORIZATION_BASE_URL,
+        state=state,
+    )
     return redirect(authorization_url)
 
 
@@ -698,30 +1670,41 @@ def login_github():
 def github_callback():
     if not GITHUB_CLIENT_ID or not GITHUB_CLIENT_SECRET:
         return redirect("/login")
-    state = session.pop("oauth_state", None)
+    raw_state = request.args.get("state")
+    meta = _unpack_oauth_state(raw_state) or {}
+    # 优先用签名 state；同域时再回退 flask session
+    oauth_next = meta.get("next") or session.pop("oauth_next", None) or "/"
+    oauth_bind = bool(meta.get("bind") if "bind" in meta else session.pop("oauth_bind", None))
+    session.pop("oauth_state", None)
+    if not (isinstance(oauth_next, str) and oauth_next.startswith("/") and not oauth_next.startswith("//")):
+        oauth_next = "/"
     redirect_uri = _build_oauth_redirect_uri()
     github = OAuth2Session(
         GITHUB_CLIENT_ID,
         redirect_uri=redirect_uri,
         scope=["user:email"],
     )
+    proxies = _oauth_http_proxies()
     try:
         github.fetch_token(
             GITHUB_TOKEN_URL,
             client_id=GITHUB_CLIENT_ID,
             client_secret=GITHUB_CLIENT_SECRET,
             code=request.args.get("code"),
-            state=state,
+            timeout=20,
+            proxies=proxies,
         )
     except Exception as e:
         app.logger.warning("GitHub OAuth token 获取失败: %s", e)
-        return redirect("/login?error=oauth_failed")
+        dest = "/profile" if oauth_bind else "/login"
+        return redirect(f"{dest}?error=oauth_failed")
     try:
-        user_resp = github.get(GITHUB_API_URL)
+        user_resp = github.get(GITHUB_API_URL, timeout=20, proxies=proxies)
         user_data = user_resp.json()
     except Exception as e:
         app.logger.warning("GitHub API 请求失败: %s", e)
-        return redirect("/login?error=oauth_api_failed")
+        dest = "/profile" if oauth_bind else "/login"
+        return redirect(f"{dest}?error=oauth_api_failed")
 
     github_id = user_data.get("id")
     username = user_data.get("login")
@@ -729,28 +1712,59 @@ def github_callback():
     if not github_id:
         return redirect("/login?error=oauth_no_id")
 
-    # 如果当前已登录，尝试绑定到当前账号
-    current_uid = session.get("user_id")
+    # 如果当前已登录（或 state 里带了 uid），尝试绑定到该账号
+    current_uid = session.get("user_id") or meta.get("uid")
     if current_uid:
         db = get_db()
         try:
             cur = db.cursor()
-            cur.execute("SELECT id, username, role, status, github_id FROM users WHERE id=%s", (current_uid,))
+            cur.execute(
+                "SELECT id, username, role, status, github_id FROM users WHERE id=%s",
+                (current_uid,),
+            )
             current_user = cur.fetchone()
-            if current_user and not current_user.get("github_id"):
-                cur.execute("UPDATE users SET github_id=%s WHERE id=%s", (str(github_id), current_uid))
+            if not current_user:
+                pass
+            elif current_user.get("github_id"):
+                # 已绑定：回到 next，不切号
+                return redirect(oauth_next if oauth_bind or oauth_next != "/" else (
+                    "/admin" if current_user["role"] == "admin" else "/"
+                ))
+            else:
+                cur.execute(
+                    "SELECT id FROM users WHERE github_id=%s AND id<>%s",
+                    (str(github_id), current_uid),
+                )
+                if cur.fetchone():
+                    dest = "/profile" if (oauth_bind or oauth_next.startswith("/profile")) else oauth_next
+                    sep = "&" if "?" in dest else "?"
+                    return redirect(f"{dest}{sep}error=github_taken")
+                cur.execute(
+                    "UPDATE users SET github_id=%s WHERE id=%s",
+                    (str(github_id), current_uid),
+                )
                 db.commit()
-                app.logger.info("用户 %s 绑定 GitHub ID %s", current_uid, github_id)
+                app.logger.info("用户 %s 绑定 GitHub ID %s (@%s)", current_uid, github_id, username)
                 session["is_admin"] = current_user["role"] == "admin"
                 session["user_id"] = current_user["id"]
                 session["username"] = current_user["username"]
                 session.permanent = True
                 session.modified = True
-                return redirect("/admin" if current_user["role"] == "admin" else "/")
+                dest = oauth_next if oauth_bind or oauth_next != "/" else (
+                    "/admin" if current_user["role"] == "admin" else "/"
+                )
+                if dest.startswith("/profile"):
+                    sep = "&" if "?" in dest else "?"
+                    return redirect(f"{dest}{sep}bound=github")
+                return redirect(dest)
         except Exception as e:
             app.logger.warning("GitHub 绑定失败: %s", e)
+            if oauth_bind:
+                return redirect("/profile?error=bind_failed")
         finally:
             db.close()
+        if oauth_bind:
+            return redirect("/profile?error=bind_failed")
 
     user, error = _find_or_create_oauth_user(github_id, username, email)
     if error:
@@ -761,13 +1775,18 @@ def github_callback():
     session["username"] = user["username"]
     session.permanent = True
     session.modified = True
+    if oauth_next and oauth_next not in ("/", "/login"):
+        return redirect(oauth_next)
     return redirect("/admin" if user["role"] == "admin" else "/")
 
 
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect("/")
+    next_url = (request.args.get("next") or "").strip()
+    if next_url.startswith("/") and not next_url.startswith("//"):
+        return redirect(next_url)
+    return redirect("/login")
 
 
 # ==================== 主页 ====================
@@ -786,13 +1805,33 @@ def index():
 @app.route("/api/user/me")
 def api_user_me():
     """返回当前登录用户信息"""
-    if session.get("user_id"):
-        return jsonify({
-            "logged_in": True,
-            "username": session.get("username", ""),
-            "is_admin": session.get("is_admin", False),
-        })
-    return jsonify({"logged_in": False})
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"logged_in": False})
+    payload = {
+        "logged_in": True,
+        "user_id": uid,
+        "username": session.get("username", ""),
+        "is_admin": session.get("is_admin", False),
+        "github_id": None,
+        "telegram_id": None,
+    }
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute(
+            "SELECT github_id, telegram_id FROM users WHERE id=%s",
+            (uid,),
+        )
+        row = cur.fetchone()
+        if row:
+            payload["github_id"] = row.get("github_id")
+            payload["telegram_id"] = row.get("telegram_id")
+    except Exception:
+        pass
+    finally:
+        db.close()
+    return jsonify(payload)
 
 
 @app.route("/api/site-settings")
@@ -824,6 +1863,99 @@ def api_stats():
         return jsonify({"total": total, "types": types, "qualities": qualities})
     finally:
         db.close()
+
+
+# ==================== 累计访问 ====================
+_VISIT_REDIS_KEY = "res_web:visits:total"
+_VISIT_DAILY_PREFIX = "res_web:visits:daily:"
+
+
+def _visit_today_key():
+    return f"{_VISIT_DAILY_PREFIX}{datetime.now().strftime('%Y-%m-%d')}"
+
+
+def _get_visit_counts():
+    """读取累计/今日访问；Redis 优先，settings 兜底并回填 Redis。"""
+    total, today = 0, 0
+    daily_key = _visit_today_key()
+    try:
+        r = get_redis()
+        raw = r.get(_VISIT_REDIS_KEY)
+        if raw is not None:
+            total = int(raw)
+        else:
+            total = int(_setting_db("total_visits", "0") or 0)
+            r.set(_VISIT_REDIS_KEY, total)
+        raw_d = r.get(daily_key)
+        today = int(raw_d) if raw_d is not None else 0
+    except Exception:
+        try:
+            total = int(_setting_db("total_visits", "0") or 0)
+        except (TypeError, ValueError):
+            total = 0
+        today = 0
+    return total, today
+
+
+def _incr_visit_counts():
+    """原子自增累计/今日访问，并持久化到 settings。"""
+    daily_key = _visit_today_key()
+    try:
+        r = get_redis()
+        # 首次从 DB 回填，避免 Redis 空 key 从 0 重新计
+        if r.get(_VISIT_REDIS_KEY) is None:
+            seed = int(_setting_db("total_visits", "0") or 0)
+            r.set(_VISIT_REDIS_KEY, seed)
+        total = int(r.incr(_VISIT_REDIS_KEY))
+        today = int(r.incr(daily_key))
+        r.expire(daily_key, 86400 * 3)
+        if total % 10 == 0:
+            _upsert_setting("total_visits", str(total), "累计访问量")
+        return total, today
+    except Exception:
+        # Redis 不可用时走 MySQL 原子更新
+        db = get_db()
+        try:
+            cur = db.cursor()
+            cur.execute(
+                "INSERT INTO settings (`key`, value, description) VALUES ('total_visits', '1', '累计访问量') "
+                "ON DUPLICATE KEY UPDATE value = CAST(value AS UNSIGNED) + 1"
+            )
+            db.commit()
+            cur.execute("SELECT value FROM settings WHERE `key`='total_visits'")
+            row = cur.fetchone()
+            total = int((row or {}).get("value") or 1)
+            return total, 0
+        finally:
+            db.close()
+
+
+@app.route("/api/visit", methods=["POST"])
+@csrf.exempt
+def api_visit_track():
+    """首页访问打点：同浏览器 30 分钟内只计 1 次，防刷新刷量"""
+    cookie_name = "vd_visit_dedupe"
+    if request.cookies.get(cookie_name):
+        total, today = _get_visit_counts()
+        return jsonify({"ok": True, "counted": False, "total": total, "today": today})
+    total, today = _incr_visit_counts()
+    resp = jsonify({"ok": True, "counted": True, "total": total, "today": today})
+    resp.set_cookie(
+        cookie_name,
+        "1",
+        max_age=1800,
+        httponly=True,
+        samesite="Lax",
+        path="/",
+    )
+    return resp
+
+
+@app.route("/api/visit")
+def api_visit_get():
+    """读取累计/今日访问（无需登录）"""
+    total, today = _get_visit_counts()
+    return jsonify({"total": total, "today": today})
 
 
 # ==================== API: 网盘分类标签 ====================
@@ -876,8 +2008,8 @@ def api_resources():
         conditions, params = [], []
 
         if query:
-            conditions.append("(title LIKE %s OR note LIKE %s)")
-            params.extend([f"%{query}%", f"%{query}%"])
+            conditions.append("(title LIKE %s OR note LIKE %s OR keyword LIKE %s)")
+            params.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
             
             # 记录搜索日志
             try:
@@ -919,14 +2051,32 @@ def api_resources():
         total = cur.fetchone()["total"]
         total_pages = max(1, (total + per_page - 1) // per_page)
 
-        cur.execute(
-            f"""SELECT id, keyword, source, url, title, note, password,
-                   quality, type, year, rating, datetime, created_at
-            FROM resources {where}
-            ORDER BY created_at DESC
-            LIMIT %s OFFSET %s""",
-            params + [per_page, offset],
-        )
+        if query:
+            like = f"%{query}%"
+            cur.execute(
+                f"""SELECT id, keyword, source, url, title, note, password,
+                       quality, type, year, rating, datetime, created_at
+                FROM resources {where}
+                ORDER BY
+                  CASE
+                    WHEN title LIKE %s THEN 0
+                    WHEN IFNULL(note,'') LIKE %s THEN 1
+                    WHEN keyword LIKE %s THEN 2
+                    ELSE 3
+                  END,
+                  created_at DESC
+                LIMIT %s OFFSET %s""",
+                params + [like, like, like, per_page, offset],
+            )
+        else:
+            cur.execute(
+                f"""SELECT id, keyword, source, url, title, note, password,
+                       quality, type, year, rating, datetime, created_at
+                FROM resources {where}
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s""",
+                params + [per_page, offset],
+            )
         items = cur.fetchall()
 
         payload = {
@@ -1482,7 +2632,7 @@ def api_users():
         total = cur.fetchone()["total"]
 
         cur.execute(
-            """SELECT id, username, email, role, status, last_login, created_at, updated_at, github_id
+            """SELECT id, username, email, role, status, last_login, created_at, updated_at, github_id, telegram_id
             FROM users ORDER BY id ASC LIMIT %s OFFSET %s""",
             (per_page, offset),
         )
@@ -1603,21 +2753,18 @@ def api_user_bind_github(uid):
 
 @app.route("/api/user/bind_github", methods=["POST"])
 def api_user_bind_github_self():
-    """当前登录用户绑定自己的 GitHub 账号"""
+    """当前登录用户解绑 GitHub（绑定请走 /login/github?bind=1 OAuth）"""
     uid = session.get("user_id")
     if not uid:
         return jsonify({"error": "未登录"}), 401
     data = request.get_json() or {}
-    github_id = data.get("github_id")
-    if not github_id:
-        return jsonify({"error": "缺少 github_id"}), 400
+    # 仅允许解绑；绑定必须走 GitHub OAuth，避免手填 ID
+    if data.get("github_id") not in (None, "", False):
+        return jsonify({"error": "请使用 GitHub 登录完成绑定", "oauth": "/login/github?bind=1&next=/profile"}), 400
     db = get_db()
     try:
         cur = db.cursor()
-        cur.execute(
-            "UPDATE users SET github_id=%s WHERE id=%s",
-            (str(github_id), uid),
-        )
+        cur.execute("UPDATE users SET github_id=NULL WHERE id=%s", (uid,))
         db.commit()
         return jsonify({"ok": True})
     finally:
@@ -1897,6 +3044,121 @@ def api_fav_del(rid):
         db.commit()
         return jsonify({"ok": True})
     finally: db.close()
+
+
+# ==================== TMDB 海报片单（首页海报墙收藏） ====================
+def _ensure_watchlist_table():
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS watchlist (
+              id BIGINT NOT NULL AUTO_INCREMENT,
+              user_id INT NOT NULL,
+              tmdb_id BIGINT NOT NULL,
+              media_type VARCHAR(16) NOT NULL DEFAULT 'movie',
+              title VARCHAR(255) NOT NULL DEFAULT '',
+              poster TEXT NULL,
+              year VARCHAR(8) NULL,
+              rating VARCHAR(16) NULL,
+              overview TEXT NULL,
+              created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (id),
+              UNIQUE KEY uk_user_tmdb (user_id, tmdb_id, media_type),
+              KEY idx_watchlist_user (user_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+        )
+        db.commit()
+    except Exception as e:
+        app.logger.warning("ensure watchlist table: %s", e)
+    finally:
+        db.close()
+
+
+@app.route("/api/watchlist")
+def api_watchlist():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "未登录"}), 401
+    _ensure_watchlist_table()
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute(
+            "SELECT id, tmdb_id, media_type, title, poster, year, rating, overview, created_at "
+            "FROM watchlist WHERE user_id=%s ORDER BY created_at DESC",
+            (uid,),
+        )
+        items = cur.fetchall()
+        for i in items:
+            i["created_at"] = str(i["created_at"]) if i.get("created_at") else ""
+        return jsonify({"items": items, "total": len(items)})
+    finally:
+        db.close()
+
+
+@app.route("/api/watchlist", methods=["POST"])
+def api_watchlist_add():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "未登录"}), 401
+    data = request.get_json() or {}
+    tmdb_id = data.get("tmdb_id")
+    if not tmdb_id:
+        return jsonify({"error": "缺少 tmdb_id"}), 400
+    try:
+        tmdb_id = int(tmdb_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "tmdb_id 无效"}), 400
+    media_type = (data.get("media_type") or "movie").strip()[:16] or "movie"
+    title = (data.get("title") or "").strip()[:255]
+    if not title:
+        return jsonify({"error": "缺少标题"}), 400
+    poster = (data.get("poster") or "")[:2000]
+    year = str(data.get("year") or "")[:8]
+    rating = str(data.get("rating") or "")[:16]
+    overview = (data.get("overview") or "")[:2000]
+
+    _ensure_watchlist_table()
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute(
+            """
+            INSERT INTO watchlist (user_id, tmdb_id, media_type, title, poster, year, rating, overview)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+              title=VALUES(title), poster=VALUES(poster), year=VALUES(year),
+              rating=VALUES(rating), overview=VALUES(overview)
+            """,
+            (uid, tmdb_id, media_type, title, poster, year, rating, overview),
+        )
+        db.commit()
+        return jsonify({"ok": True})
+    finally:
+        db.close()
+
+
+@app.route("/api/watchlist/<int:tmdb_id>", methods=["DELETE"])
+def api_watchlist_del(tmdb_id):
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "未登录"}), 401
+    media_type = (request.args.get("media_type") or "movie").strip()[:16] or "movie"
+    _ensure_watchlist_table()
+    db = get_db()
+    try:
+        cur = db.cursor()
+        cur.execute(
+            "DELETE FROM watchlist WHERE user_id=%s AND tmdb_id=%s AND media_type=%s",
+            (uid, tmdb_id, media_type),
+        )
+        db.commit()
+        return jsonify({"ok": True})
+    finally:
+        db.close()
 
 # ==================== 搜索历史 API ====================
 @app.route("/api/search_history")
@@ -2400,13 +3662,14 @@ def api_tmdb_trending():
         for it in data.get("results", [])[:20]:
             items.append({
                 "title": it.get("title") or it.get("name") or "",
-                "overview": (it.get("overview") or "")[:200],
+                "overview": (it.get("overview") or "")[:280],
                 "poster": ("/api/img_proxy?url=" + urllib.parse.quote("https://image.tmdb.org/t/p/w342" + it["poster_path"])) if it.get("poster_path") else "",
                 "backdrop": ("/api/img_proxy?url=" + urllib.parse.quote("https://image.tmdb.org/t/p/w780" + it["backdrop_path"])) if it.get("backdrop_path") else "",
                 "rating": round(it.get("vote_average", 0), 1),
                 "media_type": it.get("media_type", ""),
                 "year": (it.get("release_date") or it.get("first_air_date") or "")[:4],
                 "tmdb_id": it.get("id"),
+                "genre_ids": it.get("genre_ids") or [],
             })
         result_data = {"items": items, "total": data.get("total_results", 0)}
         # 写入缓存（存数据字典，不存response对象，防止gzip中间件重复压缩）
@@ -2681,6 +3944,9 @@ def api_admin_dashboard():
         for tbl in ["resources", "users", "search_logs", "favorites", "filter_words"]:
             cur.execute(f"SELECT COUNT(*) as c FROM {tbl}")
             stats[tbl] = cur.fetchone()["c"]
+        total_visits, today_visits = _get_visit_counts()
+        stats["total_visits"] = total_visits
+        stats["today_visits"] = today_visits
 
         return jsonify({
             "daily_resources": daily_resources,
@@ -2690,6 +3956,8 @@ def api_admin_dashboard():
             "source_dist": source_dist,
             "quality_dist": quality_dist,
             "overview": stats,
+            "total_visits": total_visits,
+            "today_visits": today_visits,
         })
     finally:
         db.close()
@@ -2725,15 +3993,39 @@ def api_docs():
 @app.route("/api/admin/settings")
 @admin_required
 def api_admin_settings():
-    """获取所有系统设置"""
+    """获取所有系统设置（敏感值脱敏）"""
+    _ensure_telegram_settings_keys()
     db = get_db()
     try:
         cur = db.cursor()
         cur.execute("SELECT `key`, value, description, updated_at FROM settings ORDER BY `key`")
         items = cur.fetchall()
+        secret_keys = {"telegram_bot_token", "admin_pass", "tmdb_api_key", "secret_key"}
         for i in items:
             i["updated_at"] = str(i["updated_at"]) if i.get("updated_at") else ""
-        return jsonify({"items": items})
+            if i.get("key") in secret_keys and i.get("value"):
+                i["value_masked"] = _mask_secret(i["value"])
+                i["has_value"] = True
+                # 前端编辑用：不回传明文；有值时用占位提示
+                i["value"] = ""
+            else:
+                i["has_value"] = bool(i.get("value"))
+                i["value_masked"] = ""
+        # 附带当前生效的 TG 登录状态（env 兜底也算）
+        return jsonify({
+            "items": items,
+            "telegram_login": {
+                "enabled": bool(_telegram_bot_token() and _telegram_bot_username()),
+                "bot_username": _telegram_bot_username(),
+                "token_configured": bool(_telegram_bot_token()),
+                "superadmin_ids": sorted(_telegram_superadmin_ids()),
+                "required_chat": _telegram_required_chat(),
+                "required_chat_link": (
+                    (lambda c: (c if c.startswith("http") else f"https://t.me/{c.lstrip('@')}"))(_telegram_required_chat())
+                    if _telegram_required_chat() else ""
+                ),
+            },
+        })
     finally:
         db.close()
 
@@ -2741,37 +4033,61 @@ def api_admin_settings():
 @app.route("/api/admin/settings", methods=["POST"])
 @admin_required
 def api_admin_settings_update():
-    """更新系统设置"""
+    """更新系统设置（upsert）"""
+    _ensure_telegram_settings_keys()
     data = request.get_json() or {}
     db = get_db()
     try:
         cur = db.cursor()
         updated = 0
-        # 支持前端数组格式 {settings: [{key, value}, ...]}
         settings_list = data.get("settings", [])
+        pairs = []
         if settings_list:
             for item in settings_list:
                 if isinstance(item, dict) and "key" in item and "value" in item:
-                    k, v = item["key"], item["value"]
-                    cur.execute(
-                        "UPDATE settings SET value=%s WHERE `key`=%s",
-                        (str(v), k)
-                    )
-                    updated += cur.rowcount
+                    pairs.append((item["key"], item["value"]))
         else:
-            # 兼容直接传 dict 的格式
             for k, v in data.items():
                 if k in ("admin_pass", "settings"):
                     continue
+                pairs.append((k, v))
+
+        for k, v in pairs:
+            k = str(k).strip()
+            if not k:
+                continue
+            # 敏感字段留空 = 不修改
+            if k in ("telegram_bot_token", "admin_pass", "tmdb_api_key") and (v is None or str(v).strip() == ""):
+                continue
+            if k == "telegram_bot_username":
+                v = str(v).strip().lstrip("@")
+            cur.execute("SELECT `key` FROM settings WHERE `key`=%s", (k,))
+            if cur.fetchone():
+                cur.execute("UPDATE settings SET value=%s WHERE `key`=%s", (str(v), k))
+            else:
                 cur.execute(
-                    "UPDATE settings SET value=%s WHERE `key`=%s",
-                    (str(v), k)
+                    "INSERT INTO settings (`key`, value, description) VALUES (%s, %s, %s)",
+                    (k, str(v), ""),
                 )
-                updated += cur.rowcount
+            updated += 1
+
+        # 可选：单独改管理员密码字段（旧逻辑兼容）
+        admin_pass = data.get("admin_pass")
+        if admin_pass:
+            cur.execute("SELECT `key` FROM settings WHERE `key`='admin_pass'")
+            if cur.fetchone():
+                cur.execute("UPDATE settings SET value=%s WHERE `key`='admin_pass'", (str(admin_pass),))
+            else:
+                cur.execute(
+                    "INSERT INTO settings (`key`, value, description) VALUES ('admin_pass', %s, '管理员密码')",
+                    (str(admin_pass),),
+                )
+            updated += 1
+
         db.commit()
-        for k in list(_cache.keys()):
-            if "/api/" in k:
-                del _cache[k]
+        for ck in list(_cache.keys()):
+            if "/api/" in ck:
+                del _cache[ck]
         return jsonify({"ok": True, "updated": updated})
     finally:
         db.close()

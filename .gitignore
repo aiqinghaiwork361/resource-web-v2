@@ -34,3 +34,6 @@ Thumbs.db
 
 # Hermes 本地元数据
 .hermes/
+
+# 旧版手工快照目录（已改用 git tag + scripts/vm.sh）
+# versions/ 已在上方忽略

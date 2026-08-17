@@ -1,22 +1,41 @@
 services:
   resource-web:
     build: .
-    container_name: resource_web_v2
+    container_name: resource_web
     ports:
-      - "5001:5000"
+      - "5000:5000"
     restart: unless-stopped
     env_file:
       - .env
     environment:
       - TZ=Asia/Shanghai
+      - HTTPS_PROXY=http://192.168.0.201:7890
+      - HTTP_PROXY=http://192.168.0.201:7890
+      - NO_PROXY=localhost,127.0.0.1,resource_web_redis,resource-mysql,192.168.0.201,::1
+      - GITHUB_HTTP_PROXY=http://192.168.0.201:7890
+    # 二开：源码挂载，改 py/html 后自动 reload
+    volumes:
+      - ./:/app
+    command:
+      [
+        "gunicorn",
+        "--bind", "0.0.0.0:5000",
+        "--workers", "2",
+        "--threads", "2",
+        "--timeout", "60",
+        "--reload",
+        "--access-logfile", "-",
+        "app:app",
+      ]
     networks:
       - resource_web_resource-net
     depends_on:
-      - redis2
+      redis:
+        condition: service_healthy
 
-  redis2:
+  redis:
     image: redis:7-alpine
-    container_name: resource_web_v2_redis
+    container_name: resource_web_redis
     restart: unless-stopped
     command: >
       redis-server
@@ -24,19 +43,19 @@ services:
       --maxmemory 128mb
       --maxmemory-policy allkeys-lru
     volumes:
-      - redis2_v2_data:/data
+      - resource_web_redis_data:/data
     networks:
       - resource_web_resource-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 5s
 
 networks:
   resource_web_resource-net:
     external: true
 
 volumes:
-  redis2_v2_data:
+  resource_web_redis_data:

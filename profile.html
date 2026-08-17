@@ -3,88 +3,145 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>我的收藏 - 资源雷达</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+<title>我的收藏 · VaultDrive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800&family=Sora:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
-  :root {
-    --bg: #050807;
-    --bg-surface: #0a100c;
-    --bg-card: #0d1510;
-    --bg-card-hover: #121c14;
-    --text: #d4ffe8;
-    --text-secondary: #6fa886;
-    --text-muted: #4a7560;
-    --cyan: #00d2ff;
-    --magenta: #ff2d95;
-    --r: 10px;
-    --shadow-card: 0 0 0 1px rgba(0, 255, 156, 0.12), 0 2px 0 rgba(0, 255, 156, 0.05);
-  }
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-  }
-  header {
-    position: sticky; top: 0; z-index: 50;
-    background: rgba(5,8,7,0.85);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(0,255,156,0.08);
-    padding: 0 24px; height: 56px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .logo { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
-  .logo-icon { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,var(--cyan),var(--magenta)); display:flex; align-items:center; justify-content:center; font-size:16px; }
-  .logo-text { font-weight:700; font-size:1rem; letter-spacing:0.02em; }
-  .header-actions { display:flex; align-items:center; gap:12px; }
-  .btn {
-    padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.04); color: var(--text); font-size: 0.85rem;
-    cursor: pointer; text-decoration: none; transition: all 0.2s;
-  }
-  .btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
-  .btn-primary { background: linear-gradient(135deg, var(--cyan), #0189a8); border-color: transparent; color: white; font-weight: 600; }
-  .btn-primary:hover { opacity: 0.9; }
-  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-  .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
-  .page-subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 24px; }
-  .empty-state {
-    text-align: center; padding: 80px 20px; color: var(--text-muted);
-  }
-  .empty-state-icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.5; }
-  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-  .card {
-    background: var(--bg-card); border-radius: var(--r); overflow: hidden;
-    box-shadow: var(--shadow-card); transition: all 0.25s; cursor: pointer;
-    border: 1px solid rgba(0,255,156,0.06);
-  }
-  .card:hover { transform: translateY(-4px); background: var(--bg-card-hover); box-shadow: 0 0 0 1px rgba(0,255,156,0.2), 0 8px 30px rgba(0,0,0,0.4); }
-  .card-poster { width: 100%; aspect-ratio: 2/3; background: var(--bg-surface); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .card-poster img { width: 100%; height: 100%; object-fit: cover; }
-  .card-poster-placeholder { color: var(--text-muted); font-size: 2.5rem; }
-  .card-body { padding: 12px; }
-  .card-title { font-size: 0.9rem; font-weight: 600; color: var(--text); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 6px; }
-  .card-meta { display: flex; gap: 8px; flex-wrap: wrap; }
-  .card-tag { font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; background: rgba(0,255,156,0.08); color: var(--text-secondary); border: 1px solid rgba(0,255,156,0.12); }
-  .card-rating { font-size: 0.8rem; color: #ffd866; font-weight: 600; }
-  .card-actions { display: flex; gap: 8px; margin-top: 10px; }
-  .card-actions .btn { flex: 1; text-align: center; font-size: 0.78rem; padding: 5px 8px; }
-  .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    padding: 10px 20px; border-radius: 8px; background: rgba(0,0,0,0.9); color: white;
-    font-size: 0.9rem; z-index: 1000; opacity: 0; transition: opacity 0.3s; pointer-events: none;
-    border: 1px solid rgba(255,255,255,0.1);
-  }
-  .toast.show { opacity: 1; }
-  .loading { text-align: center; padding: 60px; color: var(--text-muted); }
+:root {
+  --bg: #000000;
+  --bg-surface: #0a0a0a;
+  --bg-card: #121212;
+  --bg-card-hover: #1a1a1a;
+  --text: #f5f5f5;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+  --teal: #2dd4bf;
+  --teal-dim: #14b8a6;
+  --border: rgba(255, 255, 255, 0.10);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --r: 14px;
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.04), 0 12px 32px rgba(0,0,0,0.55);
+  --font-display: 'Fraunces', 'Noto Sans SC', Georgia, serif;
+  --font-body: 'Sora', 'Noto Sans SC', sans-serif;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-body);
+  background:
+    radial-gradient(ellipse 900px 700px at 12% 0%, rgba(45,212,191,0.05), transparent 70%),
+    var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+header {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 24px; height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+.logo-icon { display: none; }
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.btn {
+  padding: 8px 14px; border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card); color: var(--text); font-size: 0.85rem;
+  cursor: pointer; text-decoration: none; transition: all 0.2s;
+  font-family: inherit;
+}
+.btn:hover { border-color: var(--teal); color: var(--teal); }
+.btn-primary {
+  background: var(--teal); border-color: var(--teal); color: #000; font-weight: 600;
+}
+.btn-primary:hover { background: var(--teal-dim); color: #000; border-color: var(--teal-dim); }
+.container { max-width: 1120px; margin: 0 auto; padding: 36px 24px 64px; }
+.page-kicker {
+  font-size: 0.68rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--teal); font-weight: 600; margin-bottom: 8px;
+}
+.page-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 800; letter-spacing: -0.03em; margin-bottom: 6px;
+}
+.page-subtitle { color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 28px; }
+.empty-state {
+  text-align: center; padding: 72px 20px; color: var(--text-muted);
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 20px; box-shadow: var(--shadow-card);
+}
+.empty-state-icon {
+  width: 56px; height: 56px; margin: 0 auto 16px;
+  border-radius: 50%; background: rgba(45,212,191,0.10);
+  display: grid; place-items: center; color: var(--teal); font-size: 1.4rem;
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 18px;
+}
+.card {
+  background: var(--bg-card); border-radius: var(--r); overflow: hidden;
+  box-shadow: var(--shadow-card); transition: transform 0.3s cubic-bezier(0.22,1,0.36,1), box-shadow 0.3s;
+  border: 1px solid var(--border-subtle);
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 2px 0 rgba(255,255,255,0.04), 0 16px 40px rgba(0,0,0,0.55);
+}
+.card-poster {
+  width: 100%; aspect-ratio: 2/3; background: #1a1a1a;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.card-poster img { width: 100%; height: 100%; object-fit: cover; }
+.card-poster-placeholder { color: var(--text-muted); font-size: 0.85rem; }
+.card-body { padding: 12px; }
+.card-title {
+  font-size: 0.9rem; font-weight: 600; color: var(--text); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; margin-bottom: 6px;
+}
+.card-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+.card-tag {
+  font-size: 0.72rem; padding: 2px 8px; border-radius: 999px;
+  background: rgba(45,212,191,0.10); color: var(--teal);
+  border: 1px solid rgba(45,212,191,0.22);
+}
+.card-rating { font-size: 0.8rem; color: var(--teal); font-weight: 600; }
+.card-actions { display: flex; gap: 8px; margin-top: 10px; }
+.card-actions .btn { flex: 1; text-align: center; font-size: 0.78rem; padding: 6px 8px; }
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  padding: 10px 20px; border-radius: 999px; background: #f5f5f5; color: #000;
+  font-size: 0.9rem; z-index: 1000; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.loading { text-align: center; padding: 60px; color: var(--text-muted); }
+#githubSection .gh-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 14px; padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; box-shadow: var(--shadow-card);
+}
 </style>
 </head>
 <body>
 <header>
   <a href="/" class="logo">
-    <div class="logo-icon">🎬</div>
-    <div class="logo-text">资源雷达</div>
+    <div class="logo-icon"></div>
+    <div class="logo-text">VaultDrive</div>
   </a>
   <div class="header-actions">
     <a href="/" class="btn">返回首页</a>
@@ -93,11 +150,12 @@
 </header>
 
 <div class="container">
+  <div class="page-kicker">私人胶片库</div>
   <h1 class="page-title">我的收藏</h1>
-  <p class="page-subtitle" id="userInfo">加载中...</p>
-  <div id="githubSection" style="margin-bottom:20px"></div>
+  <p class="page-subtitle" id="userInfo">加载中…</p>
+  <div id="githubSection" style="margin-bottom:24px"></div>
   <div id="content">
-    <div class="loading">加载中...</div>
+    <div class="loading">加载中…</div>
   </div>
 </div>
 
@@ -132,117 +190,315 @@ async function loadGitHubSection() {
   try {
     const me = await fetch('/api/user/me').then(r => r.json());
     if (!me.logged_in) return;
-    const r = await fetch('/api/users/' + me.user_id);
-    const d = await r.json();
-    const user = (d.items && d.items[0]) || d;
-    if (!user) return;
-    const githubId = user.github_id || '';
+    const githubId = me.github_id || '';
+    const telegramId = me.telegram_id || '';
     container.innerHTML = `
-      <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div class="gh-card" style="margin-bottom:12px">
         <div>
           <div style="font-size:.85rem;color:var(--text-secondary);margin-bottom:4px">GitHub 账号</div>
-          <div style="font-size:.9rem;font-weight:600">${githubId ? 'ID: ' + githubId : '未绑定'}</div>
+          <div style="font-size:.9rem;font-weight:600">${githubId ? '已绑定 · ID ' + githubId : '未绑定'}</div>
         </div>
         ${githubId
           ? `<button class="btn" onclick="unbindGitHubSelf()">解绑</button>`
-          : `<button class="btn btn-primary" onclick="bindGitHubSelf()">绑定 GitHub</button>`}
+          : `<a class="btn btn-primary" href="/login/github?bind=1&next=/profile">登录绑定</a>`}
+      </div>
+      <div class="gh-card" id="tgBindCard">
+        <div style="min-width:0;flex:1">
+          <div style="font-size:.85rem;color:var(--text-secondary);margin-bottom:4px">Telegram 账号</div>
+          <div style="font-size:.9rem;font-weight:600" id="tgBindStatus">${telegramId ? '已绑定 · ID ' + telegramId : '未绑定'}</div>
+          <div id="tgBindHint" style="font-size:.78rem;color:var(--text-muted);margin-top:6px;display:none"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${telegramId
+            ? `<button class="btn" onclick="unbindTelegramSelf()">解绑</button>
+               <button class="btn btn-primary" onclick="rebindTelegramSelf()">重新绑定</button>`
+            : `<button class="btn btn-primary" id="tgBindBtn" onclick="startTelegramBotBind()">通过 Bot 绑定</button>`}
+        </div>
       </div>
     `;
   } catch(e) {}
 }
 
-async function bindGitHubSelf() {
-  const id = prompt('输入你的 GitHub ID（数字）：');
-  if (!id) return;
-  const r = await fetch('/api/user/bind_github', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({github_id: id})
-  });
-  const d = await r.json();
-  if (d.ok) {
-    showToast('绑定成功');
-    loadGitHubSection();
-  } else {
-    showToast(d.error || '绑定失败', 'error');
+async function csrfToken() {
+  const csrfR = await fetch('/api/csrf-token');
+  const csrfD = await csrfR.json();
+  return csrfD.csrf_token || '';
+}
+
+async function startTelegramBotBind() {
+  const btn = document.getElementById('tgBindBtn');
+  const hint = document.getElementById('tgBindHint');
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = '生成中…'; }
+    const token = await csrfToken();
+    const r = await fetch('/api/user/telegram/bind-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+      body: '{}'
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      showToast(d.error || '生成绑定码失败');
+      if (btn) { btn.disabled = false; btn.textContent = '通过 Bot 绑定'; }
+      return;
+    }
+    if (hint) {
+      hint.style.display = 'block';
+      hint.innerHTML = `打开 <a href="${d.deep_link}" target="_blank" rel="noopener" style="color:var(--teal)">@${d.bot_username}</a> 完成绑定<br>或发送 <code>/start bind_${d.code}</code>（${Math.round((d.expires_in||600)/60)} 分钟内有效）`;
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '打开 Bot';
+      btn.onclick = () => { window.open(d.deep_link, '_blank', 'noopener'); pollTelegramBound(); };
+    }
+    window.open(d.deep_link, '_blank', 'noopener');
+    pollTelegramBound();
+  } catch (e) {
+    showToast('网络错误');
+    if (btn) { btn.disabled = false; btn.textContent = '通过 Bot 绑定'; }
+  }
+}
+
+let _tgPollTimer = null;
+function pollTelegramBound() {
+  if (_tgPollTimer) clearInterval(_tgPollTimer);
+  let n = 0;
+  _tgPollTimer = setInterval(async () => {
+    n += 1;
+    try {
+      const me = await fetch('/api/user/me').then(r => r.json());
+      if (me.telegram_id) {
+        clearInterval(_tgPollTimer);
+        showToast('Telegram 绑定成功');
+        loadGitHubSection();
+      }
+    } catch (e) {}
+    if (n >= 40) clearInterval(_tgPollTimer); // ~2 分钟
+  }, 3000);
+}
+
+async function unbindTelegramSelf() {
+  if (!confirm('确定解绑你的 Telegram 账号？')) return;
+  try {
+    const token = await csrfToken();
+    const r = await fetch('/api/user/telegram/unbind', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+      body: '{}'
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showToast('已解绑 Telegram');
+      loadGitHubSection();
+    } else {
+      showToast(d.error || '解绑失败');
+    }
+  } catch (e) {
+    showToast('网络错误');
+  }
+}
+
+async function rebindTelegramSelf() {
+  if (!confirm('将先解绑当前 Telegram，再生成新的 Bot 绑定链接，继续？')) return;
+  try {
+    const token = await csrfToken();
+    const r = await fetch('/api/user/telegram/unbind', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+      body: '{}'
+    });
+    const d = await r.json();
+    if (!d.ok) {
+      showToast(d.error || '解绑失败');
+      return;
+    }
+    await loadGitHubSection();
+    showToast('已解绑，正在生成绑定链接…');
+    await startTelegramBotBind();
+  } catch (e) {
+    showToast('网络错误');
   }
 }
 
 async function unbindGitHubSelf() {
   if (!confirm('确定解绑你的 GitHub 账号？')) return;
-  const r = await fetch('/api/user/bind_github', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({github_id: null})
-  });
-  const d = await r.json();
-  if (d.ok) {
-    showToast('已解绑');
-    loadGitHubSection();
-  } else {
-    showToast(d.error || '解绑失败', 'error');
+  try {
+    const token = await csrfToken();
+    const r = await fetch('/api/user/bind_github', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': token
+      },
+      body: JSON.stringify({github_id: null})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showToast('已解绑');
+      loadGitHubSection();
+    } else {
+      showToast(d.error || '解绑失败');
+    }
+  } catch(e) {
+    showToast('网络错误');
   }
 }
+
+(function showBindFlash() {
+  try {
+    const p = new URLSearchParams(location.search);
+    if (p.get('bound') === 'github') showToast('GitHub 绑定成功');
+    else if (p.get('error') === 'github_taken') showToast('该 GitHub 已绑定其他账号');
+    else if (p.get('error') === 'bind_failed') showToast('绑定失败，请重试');
+    else if (p.get('error') === 'oauth_failed') showToast('GitHub 授权失败（网络/代理），请重试');
+    else if (p.get('error') === 'oauth_api_failed') showToast('GitHub 接口失败，请重试');
+    if (p.has('bound') || p.has('error')) {
+      history.replaceState({}, '', '/profile');
+    }
+  } catch (e) {}
+})();
 
 async function loadFavorites() {
   const container = document.getElementById('content');
   try {
-    const r = await fetch('/api/favorites');
-    if (r.status === 401) { window.location.href = '/login'; return; }
-    const d = await r.json();
-    const items = d.items || [];
-    if (items.length === 0) {
+    const [favRes, watchRes] = await Promise.all([
+      fetch('/api/favorites'),
+      fetch('/api/watchlist')
+    ]);
+    if (favRes.status === 401 || watchRes.status === 401) {
+      window.location.href = '/login';
+      return;
+    }
+    const favData = await favRes.json().catch(() => ({ items: [] }));
+    const watchData = await watchRes.json().catch(() => ({ items: [] }));
+    const resources = favData.items || [];
+    const posters = watchData.items || [];
+
+    if (!resources.length && !posters.length) {
       container.innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-icon">📭</div>
-          <div>还没有收藏任何资源</div>
-          <div style="margin-top:8px;font-size:0.85rem">浏览首页，点击资源卡片上的收藏按钮添加</div>
+          <div class="empty-state-icon">◇</div>
+          <div style="color:var(--text);font-weight:600;margin-bottom:6px">还没有收藏</div>
+          <div style="font-size:0.9rem">回到首页，点海报爱心或资源卡片收藏</div>
           <a href="/" class="btn btn-primary" style="margin-top:20px;display:inline-block">去逛逛</a>
         </div>`;
       return;
     }
-    const grid = document.createElement('div');
-    grid.className = 'card-grid';
-    for (const item of items) {
-      const card = document.createElement('div');
-      card.className = 'card';
-      const posterHtml = item.images ? `<img src="${item.images.split(',')[0]}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'card-poster-placeholder\\'>🎬</div>'">` : `<div class="card-poster-placeholder">🎬</div>`;
-      const tags = [];
-      if (item.type) tags.push(item.type);
-      if (item.quality) tags.push(item.quality);
-      if (item.year) tags.push(item.year);
-      const tagHtml = tags.map(t => `<span class="card-tag">${t}</span>`).join('');
-      card.innerHTML = `
-        <div class="card-poster">${posterHtml}</div>
-        <div class="card-body">
-          <div class="card-title">${item.title || '无标题'}</div>
-          <div class="card-meta">
-            ${tagHtml}
-            ${item.rating ? `<span class="card-rating">★ ${item.rating}</span>` : ''}
-          </div>
-          <div class="card-actions">
-            <a href="${item.url}" target="_blank" class="btn btn-primary">查看资源</a>
-            <button class="btn" onclick="removeFav(${item.resource_id}, this)">取消收藏</button>
-          </div>
-        </div>`;
-      grid.appendChild(card);
+
+    let html = '';
+    if (posters.length) {
+      html += `<div style="font-size:.82rem;color:var(--text-secondary);margin:4px 0 12px">海报片单 · ${posters.length}</div>`;
+      html += '<div class="card-grid" id="watchGrid">';
+      for (const item of posters) {
+        const poster = item.poster
+          ? `<img src="${escAttr(item.poster)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'card-poster-placeholder\\'>无海报</div>'">`
+          : `<div class="card-poster-placeholder">无海报</div>`;
+        const tags = [];
+        if (item.media_type === 'tv') tags.push('剧集');
+        else if (item.media_type === 'movie') tags.push('电影');
+        if (item.year) tags.push(item.year);
+        const tagHtml = tags.map(t => `<span class="card-tag">${escHtml(t)}</span>`).join('');
+        const title = escHtml(item.title || '无标题');
+        const titleJs = String(item.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        html += `
+          <div class="card">
+            <div class="card-poster">${poster}</div>
+            <div class="card-body">
+              <div class="card-title">${title}</div>
+              <div class="card-meta">
+                ${tagHtml}
+                ${item.rating ? `<span class="card-rating">★ ${escHtml(String(item.rating))}</span>` : ''}
+              </div>
+              <div class="card-actions">
+                <a class="btn btn-primary" href="/?q=${encodeURIComponent(item.title || '')}" onclick="event.preventDefault();location.href='/?q='+encodeURIComponent('${titleJs}')">搜索</a>
+                <button class="btn" onclick="removeWatch(${item.tmdb_id}, '${escAttr(item.media_type || 'movie')}', this)">取消</button>
+              </div>
+            </div>
+          </div>`;
+      }
+      html += '</div>';
     }
-    container.innerHTML = '';
-    container.appendChild(grid);
+
+    if (resources.length) {
+      html += `<div style="font-size:.82rem;color:var(--text-secondary);margin:28px 0 12px">资源收藏 · ${resources.length}</div>`;
+      html += '<div class="card-grid" id="favGrid">';
+      for (const item of resources) {
+        const posterHtml = item.images
+          ? `<img src="${escAttr(item.images.split(',')[0])}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'card-poster-placeholder\\'>无海报</div>'">`
+          : `<div class="card-poster-placeholder">无海报</div>`;
+        const tags = [];
+        if (item.type) tags.push(item.type);
+        if (item.quality) tags.push(item.quality);
+        if (item.year) tags.push(item.year);
+        const tagHtml = tags.map(t => `<span class="card-tag">${escHtml(t)}</span>`).join('');
+        html += `
+          <div class="card">
+            <div class="card-poster">${posterHtml}</div>
+            <div class="card-body">
+              <div class="card-title">${escHtml(item.title || '无标题')}</div>
+              <div class="card-meta">
+                ${tagHtml}
+                ${item.rating ? `<span class="card-rating">★ ${escHtml(String(item.rating))}</span>` : ''}
+              </div>
+              <div class="card-actions">
+                <a href="${escAttr(item.url || '#')}" target="_blank" class="btn btn-primary">查看</a>
+                <button class="btn" onclick="removeFav(${item.resource_id}, this)">取消</button>
+              </div>
+            </div>
+          </div>`;
+      }
+      html += '</div>';
+    }
+
+    container.innerHTML = html;
   } catch(e) {
     container.innerHTML = `<div class="empty-state">加载失败: ${e.message}</div>`;
   }
 }
 
+function escHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escAttr(s) { return escHtml(s); }
+
+async function removeWatch(tmdbId, mediaType, btn) {
+  try {
+    const csrfR = await fetch('/api/csrf-token');
+    const csrfD = await csrfR.json();
+    const r = await fetch(`/api/watchlist/${tmdbId}?media_type=${encodeURIComponent(mediaType || 'movie')}`, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-Token': csrfD.csrf_token || '' }
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showToast('已取消收藏');
+      btn.closest('.card')?.remove();
+      if (!document.querySelector('#watchGrid .card') && !document.querySelector('#favGrid .card')) {
+        loadFavorites();
+      }
+    } else {
+      showToast(d.error || '操作失败');
+    }
+  } catch(e) {
+    showToast('网络错误');
+  }
+}
+
 async function removeFav(rid, btn) {
   try {
-    const r = await fetch(`/api/favorites/${rid}`, { method: 'DELETE' });
+    const csrfR = await fetch('/api/csrf-token');
+    const csrfD = await csrfR.json();
+    const r = await fetch(`/api/favorites/${rid}`, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-Token': csrfD.csrf_token || '' }
+    });
     const d = await r.json();
     if (d.ok) {
       showToast('已取消收藏');
       btn.closest('.card').remove();
-      const grid = document.querySelector('.card-grid');
-      if (grid && grid.children.length === 0) loadFavorites();
+      if (!document.querySelector('#watchGrid .card') && !document.querySelector('#favGrid .card')) {
+        loadFavorites();
+      }
     } else {
       showToast(d.error || '操作失败');
     }
@@ -252,8 +508,7 @@ async function removeFav(rid, btn) {
 }
 
 async function doLogout() {
-  await fetch('/logout');
-  window.location.href = '/';
+  window.location.href = '/logout?next=/login';
 }
 
 function showToast(msg) {

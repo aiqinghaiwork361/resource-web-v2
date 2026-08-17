@@ -10,562 +10,694 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- v20260807_160827: NovaMind 字体 -->
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+<!-- v20260816: Daylight Archive 字体 -->
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800&family=Sora:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 
 <style>
 
 
 /* ============================================
-   v20260807_201817: Cyberdeck 终端主题
-   配色：极客绿 #00ff9c + 琥珀橙 #ffb627 + CRT 暗底
+   v20260817: Pure Black Cinema
+   纯黑底 · 海报墙主视觉（对齐深色媒资站）
    ============================================ */
 
-/* === CRT 扫描线（Cyberdeck 重新启用，0.04 opacity 不烧 GPU） === */
-.scanlines {
-  display: block !important;
-  position: fixed;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0, 255, 156, 0.04) 0px,
-    rgba(0, 255, 156, 0.04) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  mix-blend-mode: screen;
-}
-.scanlines::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.35) 100%);
-  pointer-events: none;
-}
-
-/* === 栅格叠加（终端网格） === */
-.grid-overlay {
-  display: block !important;
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(0, 255, 156, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 156, 0.03) 1px, transparent 1px);
-  background-size: 32px 32px;
-}
-
-/* === 噪点纹理 === */
-.noise {
-  position: fixed;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  opacity: 0.04;
-}
-.noise svg { width: 100%; height: 100%; }
-
-/* === 粒子画布（关） === */
+.scanlines,
+.grid-overlay,
+.noise,
 #particleCanvas {
   display: none !important;
 }
 
-/* === 背景层之上：app 内容 === */
 #app {
   position: relative;
   z-index: 5;
 }
 
-/* === 全局 CRT 效果：文本对比度+微微抖动 === */
-@keyframes crtFlicker {
-  0%, 100% { opacity: 1; }
-  3% { opacity: 0.96; }
-  6% { opacity: 1; }
-}
-body {
-  animation: crtFlicker 6s infinite;
-}
-
-
-/* ============================================
-   DESIGN TOKENS — Cyberdeck
-   ============================================ */
 :root {
-  /* 深底（终端黑 + 极客绿泛光） */
-  --bg: #050807;
-  --bg-deep: #020403;
-  --bg-surface: #0a100c;
-  --bg-card: #0d1510;
-  --bg-card-hover: #121c14;
-  --surface: rgba(0, 255, 156, 0.03);
-  --surface-hover: rgba(0, 255, 156, 0.07);
-  --bg-glass: rgba(5, 8, 7, 0.85);
+  --bg: #000000;
+  --bg-deep: #000000;
+  --bg-surface: #0a0a0a;
+  --bg-card: #121212;
+  --bg-card-hover: #1a1a1a;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-hover: rgba(255, 255, 255, 0.08);
+  --bg-glass: rgba(0, 0, 0, 0.82);
 
-  /* 极客绿 + 琥珀橙（双主色，禁用紫粉蓝霓虹） */
-  --green: #00ff9c;
-  --green-dim: #00b873;
-  --green-glow: rgba(0, 255, 156, 0.45);
-  --amber: #ffb627;
-  --amber-dim: #b8821a;
-  --amber-glow: rgba(255, 182, 39, 0.4);
-  --red: #ff3860;
-  --red-dim: #b82a47;
+  --green: #2dd4bf;
+  --green-dim: #14b8a6;
+  --green-glow: rgba(45, 212, 191, 0.28);
+  --amber: #e5e7eb;
+  --amber-dim: #9ca3af;
+  --amber-glow: rgba(229, 231, 235, 0.12);
+  --red: #f87171;
+  --red-dim: #ef4444;
 
-  /* 兼容旧变量 → 全部映射到绿/琥珀，避免粉紫泄漏 */
   --blue: var(--green);
-  --purple: var(--amber);
-  --pink: var(--amber);
+  --purple: #94a3b8;
+  --pink: #94a3b8;
   --blue-glow: var(--green-glow);
   --purple-glow: var(--amber-glow);
-  --gradient: linear-gradient(135deg, var(--green), var(--amber));
+  --gradient: linear-gradient(135deg, #2dd4bf, #64748b);
 
   --accent-primary: var(--green);
   --accent-secondary: var(--amber);
   --accent-green: var(--green);
   --accent-red: var(--red);
-  --accent-purple: var(--amber);
-  --accent-gold: var(--amber);
+  --accent-purple: var(--purple);
+  --accent-gold: #fbbf24;
 
-  /* 文本：CRT 终端绿主色 + 暖白次色 */
-  --text-primary: #d4ffe8;
-  --text-secondary: #6fa886;
-  --text-muted: #4a7560;
-  --text: #d4ffe8;
-  --text-dim: #6fa886;
-  --text-dimmer: #3a5a48;
+  --text-primary: #f5f5f5;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+  --text: #f5f5f5;
+  --text-dim: #a3a3a3;
+  --text-dimmer: #737373;
 
-  /* 边框：1px 等宽线，绿光 */
-  --border: rgba(0, 255, 156, 0.18);
-  --border-subtle: rgba(0, 255, 156, 0.10);
-  --border-medium: rgba(0, 255, 156, 0.30);
+  --border: rgba(255, 255, 255, 0.10);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.16);
 
-  /* 棱角分明，禁用大圆角 */
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 4px;
-  --radius-xl: 6px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
 
-  /* 字体：强制等宽主字体 */
-  --font-display: 'JetBrains Mono', monospace;
-  --font-mono: 'JetBrains Mono', monospace;
-  --font-body: 'JetBrains Mono', 'Noto Sans SC', monospace;
+  --font-display: 'Fraunces', 'Noto Sans SC', Georgia, serif;
+  --font-mono: 'Sora', 'Noto Sans SC', sans-serif;
+  --font-body: 'Sora', 'Noto Sans SC', sans-serif;
 
-  /* Cyberdeck 阴影：硬边、低模糊、绿/橙辉光 */
-  --shadow-card: 0 0 0 1px rgba(0, 255, 156, 0.12), 0 2px 0 rgba(0, 255, 156, 0.05);
-  --shadow-hover: 0 0 0 1px var(--green), 0 0 12px var(--green-glow), 0 0 28px rgba(0, 255, 156, 0.18);
-  --shadow-glow: 0 0 24px var(--green-glow);
-  --shadow-glow-purple: 0 0 20px var(--amber-glow);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04), 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-hover: 0 2px 0 rgba(255, 255, 255, 0.04), 0 20px 48px rgba(0, 0, 0, 0.65);
+  --shadow-glow: 0 0 0 3px rgba(45, 212, 191, 0.22);
+  --shadow-glow-purple: 0 0 0 3px rgba(148, 163, 184, 0.16);
 
-  --header-h: 56px;
-  --sidebar-w: 240px;
+  --header-h: 60px;
+  --sidebar-w: 220px;
 }
 
-/* ============================================
-   Cyberdeck 组件覆盖（覆盖现有 NovaMind 样式）
-   ============================================ */
-
-/* 全局：等宽 + 终端绿文本 + 关闭所有默认圆角与柔光 */
-* {
-  border-radius: 0 !important;
-}
 html, body {
   font-family: var(--font-body) !important;
   background: var(--bg) !important;
   color: var(--text-primary) !important;
   letter-spacing: 0 !important;
-  text-shadow: 0 0 1px rgba(0, 255, 156, 0.15);
+  text-shadow: none !important;
+  animation: none !important;
 }
 ::selection {
-  background: var(--green);
-  color: var(--bg-deep);
+  background: rgba(45, 212, 191, 0.28);
+  color: var(--text-primary);
 }
 
-/* 滚动条：CRT 终端样式 */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--bg-deep); border-left: 1px solid var(--border-subtle); }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--green-dim);
-  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
 
-/* Header：顶栏压扁成命令行条 */
 .header {
   background: var(--bg-glass) !important;
-  border-bottom: 1px solid var(--border) !important;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 1px 0 rgba(0, 255, 156, 0.08), 0 4px 12px rgba(0, 0, 0, 0.5);
-  font-family: var(--font-mono) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  backdrop-filter: blur(14px) saturate(1.1);
+  box-shadow: none !important;
+  font-family: var(--font-body) !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
 }
 .header .logo, .header h1, .header-title {
-  color: var(--green) !important;
-  text-shadow: 0 0 8px var(--green-glow);
-  font-family: var(--font-mono) !important;
-  font-weight: 500;
+  color: var(--text-primary) !important;
+  text-shadow: none !important;
+  font-family: var(--font-display) !important;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 .header .logo::before, .header-title::before {
-  content: '> ';
-  color: var(--amber);
+  content: none !important;
+}
+.logo-icon {
+  display: none !important;
 }
 
-/* Sidebar：左侧文件树式终端栏 */
 .sidebar {
   background: var(--bg-surface) !important;
-  border-right: 1px solid var(--border) !important;
-  font-family: var(--font-mono) !important;
+  border-right: 1px solid var(--border-subtle) !important;
+  font-family: var(--font-body) !important;
 }
-.sidebar h3, .sidebar-title {
-  color: var(--amber) !important;
+.sidebar h3, .sidebar-title, .nav-label {
+  color: var(--text-muted) !important;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 11px !important;
-  border-bottom: 1px dashed var(--border) !important;
+  letter-spacing: 0.14em;
+  font-size: 0.68rem !important;
+  border-bottom: none !important;
+  font-weight: 600;
 }
 .sidebar .nav-item, .sidebar a, .sidebar button {
-  font-family: var(--font-mono) !important;
-  border: 1px solid transparent;
-  padding: 6px 10px !important;
+  font-family: var(--font-body) !important;
+  border: none !important;
+  border-radius: var(--radius-md) !important;
+  padding: 9px 12px !important;
   color: var(--text-secondary) !important;
   background: transparent !important;
   text-transform: none;
+  margin: 2px 0;
 }
 .sidebar .nav-item.active, .sidebar .nav-item:hover, .sidebar a:hover, .sidebar a.active {
-  background: rgba(0, 255, 156, 0.08) !important;
+  background: rgba(45, 212, 191, 0.10) !important;
   color: var(--green) !important;
-  border-left: 2px solid var(--green) !important;
-  box-shadow: inset 2px 0 8px rgba(0, 255, 156, 0.15);
+  border-left: none !important;
+  box-shadow: none !important;
 }
 .sidebar .nav-item.active::before, .sidebar a.active::before {
-  content: '▶ ';
-  color: var(--amber);
+  content: none !important;
 }
 
-/* 搜索框：终端命令行样式 */
 .search-global, .home-search-box {
-  background: var(--bg-card) !important;
+  background: rgba(18, 18, 18, 0.92) !important;
   border: 1px solid var(--border-medium) !important;
-  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 255, 156, 0.05) !important;
-  font-family: var(--font-mono) !important;
+  box-shadow: var(--shadow-card) !important;
+  font-family: var(--font-body) !important;
+  border-radius: 999px !important;
 }
 .search-global input, .home-search-box input {
   background: transparent !important;
-  color: var(--green) !important;
+  color: var(--text-primary) !important;
   caret-color: var(--green);
-  font-family: var(--font-mono) !important;
-  font-weight: 500 !important;
-  text-shadow: 0 0 4px var(--green-glow);
+  font-family: var(--font-body) !important;
+  font-weight: 400 !important;
+  text-shadow: none !important;
 }
 .search-global input::placeholder, .home-search-box input::placeholder {
-  color: var(--text-dim) !important;
-  text-shadow: none;
+  color: var(--text-muted) !important;
 }
 .search-global input:focus, .home-search-box input:focus {
   outline: none !important;
-  box-shadow: 0 0 12px var(--green-glow) !important;
+  box-shadow: none !important;
+}
+.home-search-box:focus-within,
+.search-global:focus-within {
   border-color: var(--green) !important;
+  box-shadow: var(--shadow-glow), var(--shadow-card) !important;
+  transform: scale(1.01);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease, border-color 0.25s ease;
 }
 .search-global::before, .home-search-box .home-search-icon {
-  color: var(--amber) !important;
-  text-shadow: 0 0 6px var(--amber-glow);
+  color: var(--green) !important;
+  text-shadow: none !important;
 }
 .search-btn, .home-search-btn {
-  background: var(--green-dim) !important;
-  color: var(--bg-deep) !important;
-  border: 1px solid var(--green) !important;
-  font-family: var(--font-mono) !important;
-  font-weight: 700 !important;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  box-shadow: 0 0 8px var(--green-glow);
+  background: var(--green) !important;
+  color: #fff !important;
+  border: none !important;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  box-shadow: none !important;
+  border-radius: 999px !important;
 }
 .search-btn:hover, .home-search-btn:hover {
-  background: var(--green) !important;
-  box-shadow: 0 0 16px var(--green-glow), 0 0 32px rgba(0, 255, 156, 0.25) !important;
+  background: var(--green-dim) !important;
+  box-shadow: none !important;
+  filter: none;
 }
 
-/* 主区域：终端输出风格 */
-main, .main, #main, .content, .home-search-section {
+main, .main, #main, .content {
   background: transparent !important;
-  font-family: var(--font-mono) !important;
+  font-family: var(--font-body) !important;
 }
 
-/* Section header：分隔线 + 大写 + 编号 */
 .section-header {
-  border-bottom: 1px dashed var(--border-medium) !important;
-  color: var(--amber) !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.15em !important;
-  font-family: var(--font-mono) !important;
-  font-size: 12px !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  text-transform: none !important;
+  letter-spacing: -0.01em !important;
+  font-family: var(--font-display) !important;
+  font-size: inherit !important;
   font-weight: 700 !important;
-  padding-bottom: 8px !important;
+  padding-bottom: 12px !important;
 }
-.section-header h2, .section-header .title {
-  color: var(--amber) !important;
+.section-header h2, .section-header .title, .section-title {
+  color: var(--text-primary) !important;
+  font-family: var(--font-display) !important;
 }
 .section-header::before {
-  content: '## ';
-  color: var(--green);
+  content: none !important;
 }
 .section-header .action, .section-header .btn {
   color: var(--green) !important;
   border: 1px solid var(--border-medium) !important;
-  background: transparent !important;
-  font-family: var(--font-mono) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 11px !important;
-  padding: 4px 10px !important;
+  background: var(--bg-card) !important;
+  font-family: var(--font-body) !important;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.82rem !important;
+  padding: 6px 12px !important;
+  border-radius: var(--radius-md) !important;
 }
 .section-header .action:hover, .section-header .btn:hover {
-  background: rgba(0, 255, 156, 0.1) !important;
+  background: rgba(10, 107, 92, 0.08) !important;
   border-color: var(--green) !important;
-  box-shadow: 0 0 8px var(--green-glow);
+  box-shadow: none !important;
 }
 
-/* 卡片网格：紧凑终端网格 */
 .card-grid {
-  gap: 14px !important;
+  gap: 18px !important;
 }
 
-/* Resource card：边框硬朗 + 终端报告样式 */
-.resource-card, .card {
+.resource-card, .card, .poster-card {
   background: var(--bg-card) !important;
-  border: 1px solid var(--border) !important;
-  border-left: 3px solid var(--green-dim) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-left: 1px solid var(--border-subtle) !important;
   box-shadow: var(--shadow-card) !important;
-  font-family: var(--font-mono) !important;
-  transition: all 0.15s ease !important;
-  position: relative;
+  font-family: var(--font-body) !important;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease !important;
+  border-radius: var(--radius-lg) !important;
   overflow: hidden;
 }
 .resource-card::before, .card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 4px; height: 100%;
-  background: linear-gradient(180deg, transparent, var(--green) 50%, transparent);
-  opacity: 0;
-  transition: opacity 0.2s;
+  content: none !important;
 }
-.resource-card:hover, .card:hover {
-  border-color: var(--green) !important;
-  border-left-color: var(--green) !important;
-  background: var(--bg-card-hover) !important;
+.resource-card:hover, .card:hover, .poster-card:hover {
+  border-color: var(--border-medium) !important;
+  border-left-color: var(--border-medium) !important;
+  background: var(--bg-card) !important;
   box-shadow: var(--shadow-hover) !important;
-  transform: translateY(-2px);
-}
-.resource-card:hover::before, .card:hover::before {
-  opacity: 1;
+  transform: translateY(-4px);
 }
 
-/* Card title：终端文件名感 */
 .card-title {
   color: var(--text-primary) !important;
-  font-family: var(--font-mono) !important;
-  font-weight: 500 !important;
-  font-size: 13px !important;
-  text-transform: none;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
 }
 .card-title::before {
-  content: '$ ';
-  color: var(--amber);
-  font-weight: 700;
+  content: none !important;
 }
-
-/* Card meta：参数列表样式 */
 .card-meta, .card-info, .card-rating, .card-quality {
-  font-family: var(--font-mono) !important;
+  font-family: var(--font-body) !important;
   color: var(--text-secondary) !important;
-  font-size: 11px !important;
-  letter-spacing: 0.04em;
+  font-size: 0.75rem !important;
+  letter-spacing: 0;
 }
 .card-rating {
-  color: var(--amber) !important;
-  background: transparent !important;
-  border: 1px solid var(--amber-dim);
-  padding: 2px 6px;
-  text-shadow: 0 0 4px var(--amber-glow);
+  color: var(--green) !important;
+  border: 1px solid rgba(10, 107, 92, 0.25);
+  background: rgba(10, 107, 92, 0.06) !important;
+  text-shadow: none !important;
+  border-radius: 4px;
 }
 .card-quality {
-  color: var(--green) !important;
-  border: 1px solid var(--green-dim);
-  padding: 2px 6px;
-  background: transparent !important;
-  text-shadow: 0 0 4px var(--green-glow);
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border);
+  background: var(--bg-surface) !important;
+  text-shadow: none !important;
 }
-
-/* Poster 海报：等宽文件名占位 */
 .card-poster {
   background: var(--bg-deep) !important;
-  border-bottom: 1px solid var(--border) !important;
-  position: relative;
+  border-bottom: none !important;
 }
 .card-poster::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0, 255, 156, 0.02) 0px,
-    rgba(0, 255, 156, 0.02) 2px,
-    transparent 2px,
-    transparent 4px
-  );
-  pointer-events: none;
+  content: none !important;
 }
 .card-placeholder {
-  color: var(--text-dim) !important;
-  font-family: var(--font-mono) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  color: var(--text-muted) !important;
+  font-family: var(--font-body) !important;
+  text-transform: none;
+  letter-spacing: 0;
   background: var(--bg-deep) !important;
 }
 
-/* Stat card：终端监控面板 */
 .stat-card {
   background: var(--bg-card) !important;
-  border: 1px solid var(--border) !important;
+  border: 1px solid var(--border-subtle) !important;
   border-top: 2px solid var(--green) !important;
-  font-family: var(--font-mono) !important;
+  font-family: var(--font-body) !important;
+  border-radius: var(--radius-lg) !important;
 }
 .stat-card .label, .stat-card .stat-label {
-  color: var(--text-dim) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 10px !important;
+  color: var(--text-muted) !important;
 }
 .stat-card .value, .stat-card .stat-value {
-  color: var(--green) !important;
-  text-shadow: 0 0 6px var(--green-glow);
-  font-family: var(--font-mono) !important;
-  font-weight: 700 !important;
+  color: var(--text-primary) !important;
+  text-shadow: none !important;
+  font-family: var(--font-display) !important;
 }
-.stat-card:nth-child(2) .value, .stat-card:nth-child(2) { border-top-color: var(--amber); }
-.stat-card:nth-child(2) .value { color: var(--amber) !important; text-shadow: 0 0 6px var(--amber-glow); }
-.stat-card:nth-child(3) { border-top-color: var(--red); }
-.stat-card:nth-child(3) .value { color: var(--red) !important; text-shadow: 0 0 6px rgba(255, 56, 96, 0.4); }
 
-/* Table header：表头 */
 .table-header, table thead th {
   background: var(--bg-surface) !important;
-  color: var(--amber) !important;
-  border-bottom: 1px solid var(--border-medium) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 11px !important;
-  font-family: var(--font-mono) !important;
+  color: var(--text-secondary) !important;
+  border-bottom: 1px solid var(--border) !important;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.78rem !important;
+  font-family: var(--font-body) !important;
 }
 table tbody tr {
   border-bottom: 1px solid var(--border-subtle) !important;
-  font-family: var(--font-mono) !important;
+  font-family: var(--font-body) !important;
 }
 table tbody tr:hover {
-  background: rgba(0, 255, 156, 0.05) !important;
+  background: rgba(10, 107, 92, 0.04) !important;
 }
 
-/* Modal：终端对话框 */
 .modal, .modal-content {
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--green) !important;
-  box-shadow: 0 0 0 1px var(--green-glow), 0 0 40px rgba(0, 255, 156, 0.2), 0 24px 60px rgba(0, 0, 0, 0.7) !important;
-  font-family: var(--font-mono) !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-hover) !important;
+  font-family: var(--font-body) !important;
+  border-radius: var(--radius-xl) !important;
 }
 .modal-header, .modal-footer {
-  background: var(--bg-card) !important;
-  border-bottom: 1px solid var(--border) !important;
-  color: var(--amber) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-.modal-header::before { content: '> '; color: var(--green); }
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.8) !important;
-  backdrop-filter: blur(2px);
-}
-
-/* 按钮：终端按钮 */
-button, .btn {
-  font-family: var(--font-mono) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-/* Toast：终端输出窗口 */
-.toast {
   background: var(--bg-surface) !important;
-  border: 1px solid var(--green) !important;
-  box-shadow: 0 0 16px var(--green-glow) !important;
-  font-family: var(--font-mono) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  text-transform: none;
+  letter-spacing: 0;
 }
-.toast::before { content: '> '; color: var(--amber); }
+.modal-header::before { content: none !important; }
+.modal-overlay {
+  background: rgba(18, 26, 36, 0.45) !important;
+  backdrop-filter: blur(6px);
+}
 
-/* 链接 */
+button, .btn {
+  font-family: var(--font-body) !important;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.toast {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-hover) !important;
+  font-family: var(--font-body) !important;
+  color: var(--text-primary) !important;
+}
+.toast::before { content: none !important; }
+
 a {
   color: var(--green) !important;
   text-decoration: none !important;
-  text-shadow: 0 0 4px var(--green-glow);
+  text-shadow: none !important;
 }
 a:hover {
-  color: var(--amber) !important;
-  text-shadow: 0 0 4px var(--amber-glow);
+  color: var(--green-dim) !important;
+  text-shadow: none !important;
 }
 
-/* Home search title：大标题 */
-.home-search-title {
-  color: var(--green) !important;
-  font-family: var(--font-mono) !important;
-  text-shadow: 0 0 12px var(--green-glow);
-  font-weight: 500 !important;
+/* ===== Archive Hero ===== */
+.home-search-section,
+.archive-hero {
+  position: relative !important;
+  isolation: isolate;
+  min-height: calc(100vh - var(--header-h) - 48px);
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center;
+  padding: 48px 24px 56px !important;
+  margin: 0 0 28px !important;
+  border-radius: var(--radius-xl) !important;
+  overflow: hidden;
+  background: transparent !important;
+  font-family: var(--font-body) !important;
+}
+
+.archive-hero-bg {
+  position: absolute;
+  inset: -8%;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 20% 30%, rgba(45, 212, 191, 0.10), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 70%, rgba(255, 255, 255, 0.04), transparent 55%),
+    linear-gradient(160deg, #000000 0%, #050505 45%, #000000 100%);
+  background-size: 120% 120%;
+  animation: archiveDrift 28s ease-in-out infinite alternate;
+  filter: saturate(0.9);
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 10px;
+  padding: 18px;
+}
+.archive-hero-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0.18;
+  background-image:
+    linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 72px 96px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 75%);
+  pointer-events: none;
+}
+.archive-hero-bg.has-mosaic {
+  filter: saturate(0.65) contrast(1.08) brightness(0.72);
+}
+.archive-hero-tile {
+  position: relative;
+  z-index: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 0;
+  aspect-ratio: 2 / 3;
+  opacity: 0;
+  transform: translateY(12px);
+  animation: tileIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes tileIn {
+  to { opacity: 0.42; transform: translateY(0); }
+}
+.archive-hero-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(0.15) brightness(0.75);
+}
+.archive-hero-tile:nth-child(odd) { margin-top: 18px; }
+.archive-hero-tile:nth-child(3n) img { filter: grayscale(0.35) brightness(0.7); }
+.archive-hero-tile:nth-child(5n) img { filter: grayscale(0.05) brightness(0.8); }
+.archive-hero-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.78) 55%, rgba(0, 0, 0, 0.96) 100%);
+  pointer-events: none;
+}
+.archive-hero-content {
+  position: relative;
+  z-index: 2;
+  width: min(720px, 100%);
+  animation: archiveRise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.archive-kicker {
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: var(--green);
+  font-weight: 600;
+  margin-bottom: 14px;
 }
-.home-search-title::before {
-  content: '┌─[ ';
-  color: var(--amber);
+
+.home-search-title,
+.brand-mark {
+  color: var(--text-primary) !important;
+  font-family: var(--font-display) !important;
+  text-shadow: none !important;
+  font-weight: 800 !important;
+  text-transform: none !important;
+  letter-spacing: -0.04em !important;
+  font-size: clamp(3rem, 8vw, 5.4rem) !important;
+  line-height: 0.95 !important;
+  margin: 0 0 16px !important;
+  animation: brandBreath 6s ease-in-out infinite;
 }
+.home-search-title::before,
 .home-search-title::after {
-  content: ' ]─┐';
-  color: var(--amber);
+  content: none !important;
 }
 .home-search-subtitle {
   color: var(--text-secondary) !important;
-  font-family: var(--font-mono) !important;
+  font-family: var(--font-body) !important;
+  font-size: 1.05rem !important;
+  font-weight: 400;
+  margin: 0 auto 28px !important;
+  max-width: 28em;
+  line-height: 1.55;
 }
 
-/* Skeleton：扫描式骨架屏 */
+/* Hero 精选：类型 · 标题 · 简介（深色媒资站风格） */
+.hero-feature {
+  width: min(640px, 100%);
+  margin: 8px auto 28px;
+  text-align: left;
+  cursor: pointer;
+  min-height: 7.5rem;
+  transition: opacity 0.35s ease;
+}
+.hero-feature.is-fading {
+  opacity: 0;
+}
+.hero-feature-genre {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+.hero-feature-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 3.2vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+.hero-feature-overview {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hero-feature:hover .hero-feature-title {
+  color: var(--green);
+}
+
+/* MoviePilot 风格精选：类型 · 标题 · 简介 */
+.featured-spotlight {
+  width: min(560px, 100%);
+  margin: 0 auto 28px;
+  text-align: left;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.45s ease;
+}
+.featured-spotlight.is-fading {
+  opacity: 0;
+}
+.featured-genres {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+}
+.featured-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 3.2vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+.featured-overview {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.featured-spotlight:hover .featured-title {
+  color: var(--green);
+}
+
+.archive-hero .home-search-box {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  padding: 6px 6px 6px 20px;
+}
+
+.home-search-suggestions .chip, .suggestion-chip, .suggestion-tag {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-secondary) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.78rem !important;
+  padding: 6px 12px !important;
+  text-transform: none;
+  letter-spacing: 0;
+  border-radius: 999px !important;
+}
+.home-search-suggestions .chip:hover, .suggestion-chip:hover, .suggestion-tag:hover {
+  border-color: var(--green) !important;
+  color: var(--green) !important;
+  box-shadow: none !important;
+  background: rgba(45, 212, 191, 0.12) !important;
+}
+
+.filter-bar {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.filter-chip {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-secondary) !important;
+  border-radius: 999px !important;
+  font-family: var(--font-body) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+.filter-chip.active, .filter-chip:hover {
+  background: rgba(45, 212, 191, 0.12) !important;
+  border-color: var(--green) !important;
+  color: var(--green) !important;
+  box-shadow: none !important;
+}
+
+@keyframes archiveDrift {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(-2.5%, 1.5%, 0) scale(1.06); }
+}
+@keyframes archiveRise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes brandBreath {
+  0%, 100% { letter-spacing: -0.04em; }
+  50% { letter-spacing: -0.028em; }
+}
+
 .skeleton, .skeleton-card {
   background: linear-gradient(90deg, var(--bg-card) 0%, var(--bg-card-hover) 50%, var(--bg-card) 100%) !important;
   background-size: 200% 100% !important;
   animation: shimmer 1.4s ease infinite !important;
-  border: 1px dashed var(--border-subtle) !important;
+  border: 1px solid var(--border-subtle) !important;
 }
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
-/* home-search-suggestions chip */
-.home-search-suggestions .chip, .suggestion-chip {
-  background: var(--bg-card) !important;
-  border: 1px solid var(--border) !important;
-  color: var(--green) !important;
-  font-family: var(--font-mono) !important;
-  font-size: 11px !important;
-  padding: 4px 10px !important;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.home-search-suggestions .chip:hover, .suggestion-chip:hover {
-  border-color: var(--amber) !important;
-  color: var(--amber) !important;
-  box-shadow: 0 0 6px var(--amber-glow);
+@media (max-width: 768px) {
+  .home-search-section, .archive-hero {
+    min-height: auto;
+    padding: 28px 16px 32px !important;
+  }
+  .home-search-title, .brand-mark {
+    font-size: clamp(2.4rem, 14vw, 3.4rem) !important;
+  }
 }
 
 /* ============================================
@@ -584,14 +716,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Atmospheric background */
+/* Atmospheric background — pure black void */
 body::before {
   content: '';
   position: fixed; inset: 0;
   background:
-    radial-gradient(ellipse 800px 600px at 15% 10%, rgba(228, 168, 83, 0.04) 0%, transparent 70%),
-    radial-gradient(ellipse 600px 800px at 85% 80%, rgba(88, 166, 255, 0.03) 0%, transparent 70%),
-    radial-gradient(ellipse 400px 400px at 50% 50%, rgba(188, 140, 255, 0.02) 0%, transparent 70%);
+    radial-gradient(ellipse 900px 700px at 12% 8%, rgba(45, 212, 191, 0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 700px 800px at 88% 85%, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -600,7 +731,7 @@ body::before {
 body::after {
   content: '';
   position: fixed; inset: 0;
-  opacity: 0.025;
+  opacity: 0.04;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   pointer-events: none;
   z-index: 0;
@@ -637,12 +768,30 @@ input, select {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-columns: 1fr;
   grid-template-rows: var(--header-h) 1fr;
   grid-template-areas:
-    "header header"
-    "sidebar main";
+    "header"
+    "main";
   min-height: 100vh;
+}
+
+/* 首页：顶栏搜索让位给 Hero；检索页：顶栏搜索常驻 */
+#app.mode-home .header .search-global {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  border: none;
+}
+#app.mode-search .header .search-global {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 /* ============================================
@@ -668,6 +817,27 @@ input, select {
   display: flex;
   align-items: center;
   gap: 24px;
+  min-width: 0;
+  flex: 1;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.header-nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.84rem;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  transition: color 0.15s, background 0.15s;
+}
+.header-nav a:hover {
+  color: var(--text-primary);
+  background: rgba(10, 107, 92, 0.08);
 }
 
 .logo {
@@ -692,7 +862,7 @@ input, select {
   font-size: 16px;
   color: #06060e;
   font-weight: 900;
-  box-shadow: 0 2px 12px rgba(0, 212, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 12px rgba(10, 107, 92, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* Global Search */
@@ -700,6 +870,8 @@ input, select {
   position: relative;
   width: 520px;
   max-width: 40vw;
+  flex: 1;
+  transition: opacity 0.2s ease, width 0.2s ease;
 }
 
 .search-global input {
@@ -721,9 +893,9 @@ input, select {
 
 /* v20260807_165500: NovaMind 全局搜索 */
 .search-global input:focus {
-  border-color: rgba(0, 212, 255, 0.4);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.08);
-  background: rgba(0, 212, 255, 0.02);
+  border-color: rgba(10, 107, 92, 0.4);
+  box-shadow: 0 0 0 3px rgba(10, 107, 92, 0.08);
+  background: rgba(10, 107, 92, 0.02);
 }
 
 .search-global .search-btn {
@@ -749,6 +921,40 @@ input, select {
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
+  z-index: 120;
+  flex-shrink: 0;
+}
+
+#userArea a,
+#headerLoginBtn {
+  pointer-events: auto;
+  position: relative;
+  z-index: 121;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.user-chip .user-name {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  max-width: 7em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-chip .btn-switch {
+  border-color: rgba(10, 107, 92, 0.28);
+  color: var(--green);
+  background: rgba(10, 107, 92, 0.06);
+}
+.user-chip .btn-switch:hover {
+  background: rgba(10, 107, 92, 0.12);
 }
 
 .header-stat {
@@ -787,14 +993,15 @@ input, select {
     flex-wrap: wrap;
 }
 .ann-banner {
-  background: linear-gradient(90deg, rgba(0,212,255,0.12), rgba(0,255,156,0.08));
+  background: rgba(10, 107, 92, 0.08);
+  border-bottom: 1px solid rgba(10, 107, 92, 0.18);
 }
 .ann-alert {
-  background: rgba(248,81,73,0.12);
-  border-bottom-color: rgba(248,81,73,0.25);
+  background: rgba(194, 59, 74, 0.08);
+  border-bottom-color: rgba(194, 59, 74, 0.22);
 }
 .ann-info {
-  background: rgba(255,255,255,0.04);
+  background: rgba(18, 26, 36, 0.03);
 }
 
 /* v20260807_165500: NovaMind 头像 */
@@ -808,7 +1015,7 @@ input, select {
   place-items: center;
   color: #06060e;
   border: 2px solid var(--bg-deep);
-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+  box-shadow: 0 0 12px rgba(10, 107, 92, 0.3);
   transition: transform 0.2s, box-shadow 0.25s ease;
 }
 
@@ -863,7 +1070,7 @@ input, select {
 
 /* v20260807_165500: NovaMind 侧栏激活项 */
 .nav-item.active {
-  background: rgba(0, 212, 255, 0.08);
+  background: rgba(10, 107, 92, 0.08);
   color: var(--blue);
   border-left: 2px solid var(--blue);
 }
@@ -883,7 +1090,7 @@ input, select {
   font-size: 0.7rem;
   padding: 2px 7px;
   border-radius: 10px;
-  background: rgba(0, 212, 255, 0.12);
+  background: rgba(10, 107, 92, 0.12);
   color: var(--blue);
   font-family: var(--font-mono);
   font-weight: 600;
@@ -952,7 +1159,7 @@ input, select {
 .home-search-section {
   text-align: center;
   background: linear-gradient(180deg,
-    rgba(0, 212, 255, 0.04) 0%,
+    rgba(10, 107, 92, 0.04) 0%,
     rgba(123, 97, 255, 0.02) 100%);
   border-radius: var(--radius-xl);
   margin-bottom: 28px;
@@ -987,22 +1194,22 @@ input, select {
   align-items: center;
   gap: 8px;
   padding: 8px 8px 8px 16px;
-  background: rgba(14, 16, 30, 0.72);
+  background: rgba(12, 12, 12, 0.88);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.02);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
   transition: all 0.3s ease;
 }
 
 .home-search-box:focus-within {
-  border-color: rgba(0, 212, 255, 0.4);
+  border-color: rgba(45, 212, 191, 0.45);
   box-shadow:
-    0 0 0 3px rgba(0, 212, 255, 0.08),
-    0 0 30px rgba(0, 212, 255, 0.12),
-    0 8px 32px rgba(0, 0, 0, 0.4);
-  background: rgba(0, 212, 255, 0.03);
+    0 0 0 3px rgba(45, 212, 191, 0.12),
+    0 0 30px rgba(45, 212, 191, 0.14),
+    0 8px 32px rgba(0, 0, 0, 0.6);
+  background: rgba(18, 18, 18, 0.95);
 }
 
 .home-search-icon {
@@ -1016,7 +1223,7 @@ input, select {
 
 .home-search-box:focus-within .home-search-icon {
   color: var(--blue);
-  filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.6));
+  filter: drop-shadow(0 0 6px rgba(45, 212, 191, 0.55));
 }
 
 .home-search-box input {
@@ -1071,7 +1278,7 @@ input, select {
 .home-search-btn:hover {
   transform: translateY(-1px);
   box-shadow:
-    0 8px 24px rgba(0, 212, 255, 0.3),
+    0 8px 24px rgba(10, 107, 92, 0.3),
     0 4px 12px rgba(123, 97, 255, 0.2);
 }
 
@@ -1106,23 +1313,41 @@ input, select {
 }
 
 .suggestion-tag:hover {
-  background: rgba(0, 212, 255, 0.08);
-  border-color: rgba(0, 212, 255, 0.4);
+  background: rgba(10, 107, 92, 0.08);
+  border-color: rgba(10, 107, 92, 0.4);
   color: var(--blue);
-  box-shadow: 0 0 16px rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 16px rgba(10, 107, 92, 0.15);
 }
 
-/* 海报墙（poster-wall-grid）*/
+/* 海报墙：多列更密，单张更小 */
 #posterWallGrid {
-  grid-template-columns: repeat(6, 1fr);
-  gap: 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
 }
-
+#posterWallGrid .poster-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+#posterWallGrid .poster-col:nth-child(even) {
+  margin-top: 12px;
+}
 @media (max-width: 1200px) {
-  #posterWallGrid { grid-template-columns: repeat(4, 1fr); }
+  #posterWallGrid { max-width: 920px; gap: 7px; }
+  #posterWallGrid .poster-col { gap: 7px; }
+  #posterWallGrid .poster-col:nth-child(even) { margin-top: 10px; }
 }
 @media (max-width: 768px) {
-  #posterWallGrid { grid-template-columns: repeat(3, 1fr); }
+  #posterWallGrid { max-width: none; gap: 6px; }
+  #posterWallGrid .poster-col { gap: 6px; }
+  #posterWallGrid .poster-col:nth-child(even) { margin-top: 8px; }
   .home-search-title { font-size: 1.6rem; }
 }
 
@@ -1137,7 +1362,7 @@ input, select {
   border: 1px solid var(--border);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(0, 212, 255, 0.05);
+    0 0 0 1px rgba(10, 107, 92, 0.05);
 }
 
 .hero-slide {
@@ -1164,7 +1389,7 @@ input, select {
       rgba(6, 6, 14, 0.7) 40%,
       rgba(6, 6, 14, 0.2) 100%),
     linear-gradient(135deg,
-      rgba(0, 212, 255, 0.05) 0%,
+      rgba(10, 107, 92, 0.05) 0%,
       transparent 50%);
 }
 
@@ -1191,11 +1416,11 @@ input, select {
   margin-bottom: 12px;
   font-family: var(--font-mono);
   padding: 4px 10px;
-  background: rgba(0, 212, 255, 0.08);
-  border: 1px solid rgba(0, 212, 255, 0.25);
+  background: rgba(10, 107, 92, 0.08);
+  border: 1px solid rgba(10, 107, 92, 0.25);
   border-radius: var(--radius-sm);
   width: fit-content;
-  text-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+  text-shadow: 0 0 8px rgba(10, 107, 92, 0.3);
 }
 
 .hero-title {
@@ -1224,7 +1449,7 @@ input, select {
   color: var(--blue);
   font-weight: 700;
   font-family: var(--font-mono);
-  text-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+  text-shadow: 0 0 8px rgba(10, 107, 92, 0.3);
 }
 
 .hero-overview {
@@ -1297,14 +1522,23 @@ input, select {
 }
 
 .btn-ghost {
-  background: rgba(255,255,255,0.06);
+  background: rgba(18, 26, 36, 0.04);
   color: var(--text-primary);
   border: 1px solid var(--border-medium);
 }
 
 .btn-ghost:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.2);
+  background: rgba(10, 107, 92, 0.08);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+a.btn {
+  text-decoration: none !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .btn-sm {
@@ -1385,12 +1619,12 @@ input, select {
   padding: 12px 18px;
   margin-bottom: 4px;
   background: linear-gradient(90deg,
-    rgba(0,212,255,0.05) 0%,
-    rgba(0,212,255,0.15) 50%,
-    rgba(0,212,255,0.05) 100%);
+    rgba(10,107,92,0.05) 0%,
+    rgba(10,107,92,0.15) 50%,
+    rgba(10,107,92,0.05) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s linear infinite;
-  border: 1px solid rgba(0,212,255,0.2);
+  border: 1px solid rgba(10,107,92,0.2);
   border-radius: 10px;
   color: var(--blue, #00d4ff);
   font-size: 0.85rem;
@@ -1443,7 +1677,7 @@ input, select {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(0,212,255,0.25);
+  border: 2px solid rgba(10,107,92,0.25);
   border-top-color: var(--blue);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -1468,11 +1702,11 @@ input, select {
 
 /* v20260807_165200: NovaMind 卡片 hover */
 .resource-card:hover {
-  border-color: rgba(0, 212, 255, 0.35);
+  border-color: rgba(10, 107, 92, 0.35);
   transform: translateY(-4px);
   box-shadow:
-    0 8px 32px rgba(0, 212, 255, 0.15),
-    0 0 0 1px rgba(0, 212, 255, 0.1);
+    0 8px 32px rgba(10, 107, 92, 0.15),
+    0 0 0 1px rgba(10, 107, 92, 0.1);
 }
 
 .card-poster {
@@ -1491,7 +1725,7 @@ input, select {
   color: var(--blue);
   background:
     radial-gradient(circle at center,
-      rgba(0, 212, 255, 0.05) 0%,
+      rgba(10, 107, 92, 0.05) 0%,
       transparent 70%),
     linear-gradient(135deg, var(--bg-card) 0%, var(--bg-surface) 100%);
   font-family: var(--font-display);
@@ -1522,7 +1756,7 @@ input, select {
   gap: 4px;
   color: var(--blue);
   font-family: var(--font-mono);
-  border: 1px solid rgba(0, 212, 255, 0.25);
+  border: 1px solid rgba(10, 107, 92, 0.25);
 }
 
 .card-poster .card-quality {
@@ -1543,7 +1777,7 @@ input, select {
   position: absolute; inset: 0;
   background:
     radial-gradient(circle at center,
-      rgba(0, 212, 255, 0.08) 0%,
+      rgba(10, 107, 92, 0.08) 0%,
       rgba(6, 6, 14, 0.7) 70%);
   display: flex;
   align-items: center;
@@ -1559,19 +1793,22 @@ input, select {
   padding: 14px;
 }
 
-/* v20260807_154100: 海报墙卡片样式 */
+/* v20260807_154100: 海报墙卡片样式 — 纯海报，无底部信息条 */
 .poster-wall-card {
   padding: 0 !important;
   overflow: hidden;
   cursor: pointer;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 /* v20260807_165200: NovaMind 海报墙卡片 */
 .poster-wall-card:hover {
   transform: translateY(-4px);
   box-shadow:
-    0 12px 32px rgba(0, 212, 255, 0.18),
-    0 0 0 1px rgba(0, 212, 255, 0.15);
+    0 12px 32px rgba(10, 107, 92, 0.18),
+    0 0 0 1px rgba(10, 107, 92, 0.15);
 }
 
 .poster-wrap {
@@ -1579,10 +1816,16 @@ input, select {
   width: 100%;
   aspect-ratio: 2 / 3;
   overflow: hidden;
+  border-radius: 10px;
   background: var(--bg-card);
 }
 
 .poster-wrap img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   transition: transform 0.3s ease;
 }
 .poster-wall-card:hover .poster-wrap img {
@@ -1601,38 +1844,81 @@ input, select {
   color: var(--blue);
   font-family: var(--font-mono);
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(0, 212, 255, 0.2);
+  border: 1px solid rgba(10, 107, 92, 0.2);
+  z-index: 2;
+}
+
+.poster-fav-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+  background: rgba(6, 6, 14, 0.72);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.poster-fav-btn:hover {
+  transform: scale(1.08);
+  background: rgba(10, 107, 92, 0.85);
+}
+.poster-fav-btn.is-fav {
+  color: #ff6b81;
+  border-color: rgba(255, 107, 129, 0.45);
+  background: rgba(20, 8, 12, 0.78);
 }
 
 .poster-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 50%, rgba(0, 0, 0, 0.85) 100%);
+  background: linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.88) 100%);
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 12px;
   opacity: 0;
   transition: opacity 0.2s ease;
+  z-index: 2;
 }
 .poster-wall-card:hover .poster-overlay {
   opacity: 1;
 }
+.poster-overlay-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .poster-overlay-text {
-  font-size: 0.8rem;
+  align-self: flex-start;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #fff;
-  padding: 6px 14px;
+  padding: 5px 12px;
   background: linear-gradient(135deg, var(--blue), var(--purple));
   border-radius: var(--radius-sm);
   font-family: var(--font-display);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3);
+  letter-spacing: 0.06em;
+  box-shadow: 0 4px 16px rgba(10, 107, 92, 0.3);
 }
 
 .poster-info {
-  padding: 10px 12px 12px;
+  display: none;
 }
 .poster-title {
   font-size: 0.85rem;
@@ -1655,6 +1941,15 @@ input, select {
 }
 .poster-meta .dot {
   opacity: 0.5;
+}
+
+/* 海报墙骨架 */
+.poster-skel {
+  aspect-ratio: 2 / 3;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--bg-card) 25%, rgba(255,255,255,0.06) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 
 .card-title {
@@ -1786,7 +2081,7 @@ input, select {
 
 .tag.blue { color: var(--accent-secondary); border-color: rgba(88,166,255,0.2); background: rgba(88,166,255,0.06); }
 .tag.green { color: var(--accent-green); border-color: rgba(63,185,80,0.2); background: rgba(63,185,80,0.06); }
-.tag.highlight { color: var(--blue); border-color: rgba(0,212,255,0.2); background: rgba(0,212,255,0.06); }
+.tag.highlight { color: var(--blue); border-color: rgba(10,107,92,0.2); background: rgba(10,107,92,0.06); }
 
 .result-actions {
   display: flex;
@@ -1920,7 +2215,7 @@ tbody tr:last-child td {
 }
 
 .status-badge.success { background: rgba(63,185,80,0.1); color: var(--accent-green); }
-.status-badge.pending { background: rgba(0,212,255,0.1); color: var(--blue); }
+.status-badge.pending { background: rgba(10,107,92,0.1); color: var(--blue); }
 .status-badge.error { background: rgba(248,81,73,0.1); color: var(--accent-red); }
 .status-badge.info { background: rgba(88,166,255,0.1); color: var(--accent-secondary); }
 
@@ -1953,7 +2248,7 @@ tbody tr:last-child td {
 }
 
 .queue-icon.downloading { background: rgba(88,166,255,0.1); color: var(--accent-secondary); }
-.queue-icon.queued { background: rgba(0,212,255,0.1); color: var(--blue); }
+.queue-icon.queued { background: rgba(10,107,92,0.1); color: var(--blue); }
 .queue-icon.done { background: rgba(63,185,80,0.1); color: var(--accent-green); }
 
 .queue-info { flex: 1; min-width: 0; }
@@ -2104,8 +2399,8 @@ tbody tr:last-child td {
 
 /* v20260807_165900: NovaMind form-input focus */
 .form-input:focus {
-  border-color: rgba(0, 212, 255, 0.4);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.08);
+  border-color: rgba(10, 107, 92, 0.4);
+  box-shadow: 0 0 0 3px rgba(10, 107, 92, 0.08);
 }
 
 /* ============================================
@@ -2188,57 +2483,8 @@ tbody tr:last-child td {
     height: 50px;
     padding: 0 12px;
   }
-  .sidebar {
-    display: block !important;
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--border-subtle);
-    padding: 8px 10px;
-    background: var(--bg-surface);
-    flex-shrink: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    box-sizing: border-box;
-    position: static;
-    height: auto;
-    top: auto;
-  }
-  .sidebar nav {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: nowrap;
-  }
-  .sidebar::-webkit-scrollbar { display: none; }
-  .nav-section {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-    flex-wrap: nowrap;
-    margin-bottom: 0;
-  }
-  .nav-label { display: none; }
-  .sidebar-divider { display: none; }
-  .nav-sub { display: none !important; }
-  .nav-item {
-    flex-shrink: 0;
-    padding: 6px 12px;
-    font-size: 0.78rem;
-    white-space: nowrap;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.06);
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .nav-item.active { background: rgba(0,212,255,0.2); color: var(--blue); font-weight: 500; }
-  .nav-item .icon { display: none; }
-  .nav-item .badge { display: none; }
+  .header-nav a { padding: 6px 8px; font-size: 0.78rem; }
+  .sidebar { display: none !important; }
   .main-content {
     flex: 1;
     padding: 12px 10px;
@@ -2318,7 +2564,7 @@ tbody tr:last-child td {
 }
 @keyframes searchDot {
   0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
-  40% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 8px rgba(0,212,255,0.5); }
+  40% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 8px rgba(10,107,92,0.5); }
 }
 .skeleton {
   background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-hover) 50%, var(--bg-card) 75%);
@@ -2326,99 +2572,178 @@ tbody tr:last-child td {
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius-md);
 }
+
+/* v20260816: 搜索加载 — Daylight 轻量骨架，替代雷达/跳动点 */
+.search-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px 4px 12px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.search-loading-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 4px 4px;
+}
+.search-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(10, 107, 92, 0.15);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+.search-loading-label {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+.search-loading-label em {
+  font-style: normal;
+  color: var(--green);
+  font-weight: 600;
+}
+.search-skel-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(18,26,36,0.04));
+}
+.search-skel-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(110deg, #e8eef4 25%, #f4f7fb 40%, #e8eef4 55%);
+  background-size: 200% 100%;
+  animation: searchSkelShimmer 1.35s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.search-skel-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.search-skel-line {
+  height: 11px;
+  border-radius: 6px;
+  background: linear-gradient(110deg, #e8eef4 25%, #f4f7fb 40%, #e8eef4 55%);
+  background-size: 200% 100%;
+  animation: searchSkelShimmer 1.35s ease-in-out infinite;
+}
+.search-skel-line.w-65 { width: 65%; }
+.search-skel-line.w-42 { width: 42%; }
+.search-skel-line.w-28 { width: 28%; height: 9px; }
+.search-skel-row:nth-child(2) .search-skel-thumb,
+.search-skel-row:nth-child(2) .search-skel-line { animation-delay: 0.12s; }
+.search-skel-row:nth-child(3) .search-skel-thumb,
+.search-skel-row:nth-child(3) .search-skel-line { animation-delay: 0.24s; }
+.search-skel-row:nth-child(4) .search-skel-thumb,
+.search-skel-row:nth-child(4) .search-skel-line { animation-delay: 0.36s; }
+.search-skel-row:nth-child(5) .search-skel-thumb,
+.search-skel-row:nth-child(5) .search-skel-line { animation-delay: 0.48s; }
+@keyframes searchSkelShimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.online-loading-skeleton {
+  margin: 12px 0 4px;
+}
+.online-loading-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.online-loading-divider::before,
+.online-loading-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(18, 26, 36, 0.1), transparent);
+}
+.online-loading-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-weight: 500;
+}
+.online-loading-label .search-loading-spinner {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+}
+
+/* v20260817: Pure Black polish */
+.avatar-btn {
+  background: var(--green) !important;
+  color: #000 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.empty-state {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  margin: 12px 0;
+}
+.empty-icon {
+  width: 56px; height: 56px; margin: 0 auto 14px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(45,212,191,0.10);
+  color: var(--green);
+  font-size: 1.4rem !important;
+  opacity: 1 !important;
+}
+#page-search .section-title {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+.page {
+  animation: archiveRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 </style>
 </head>
 
 <body>
-<!-- v20260807_160827: NovaMind AI 深空主题 — 4 层背景（粒子 + 网格 + 扫描线 + 噪点） -->
-<canvas id="particleCanvas"></canvas>
-<div class="grid-overlay"></div>
-<div class="scanlines"></div>
-<div class="noise">
-<svg><filter id="noiseFilter">
-<feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch"/>
-<feColorMatrix type="saturate" values="0"/>
-</filter>
-<rect width="100%" height="100%" filter="url(#noiseFilter)"/></svg>
-</div>
+<!-- v20260817: Pure Black Cinema -->
+<canvas id="particleCanvas" style="display:none"></canvas>
 
-<div id="app">
+<div id="app" class="mode-home">
   <!-- ===== HEADER ===== -->
   <header class="header">
     <div class="header-left">
-      <div class="logo" onclick="navigateTo('home', document.querySelector('[data-page=home]'))" style="cursor:pointer">
-        <div class="logo-icon">⚡</div>
+      <div class="logo" onclick="navigateTo('home')" style="cursor:pointer">
+        <div class="logo-icon" aria-hidden="true"></div>
         VaultDrive
       </div>
       <div class="search-global">
-        <input type="text" id="globalSearch" placeholder="搜索资源…电影、剧集、软件" autocomplete="off">
-        <button class="search-btn" onclick="executeSearch()">⌕</button>
+        <input type="text" id="globalSearch" placeholder="搜索资源…" autocomplete="off">
+        <button class="search-btn" onclick="executeSearch()" type="button">⌕</button>
       </div>
     </div>
     <div class="header-right">
-      <div class="header-stat" style="display:none">
-        <span class="dot"></span>
-        <span id="engineCount">6 引擎就绪</span>
-      </div>
-      <div class="header-stat" style="display:none">
-        <span id="todaySearches">1,247</span> 次搜索
-      </div>
-      <div id="userArea"><button class="btn btn-ghost btn-sm" onclick="showAdminLoginModal()">登录</button></div>
+      <nav class="header-nav" aria-label="主导航">
+        <a href="/" onclick="event.preventDefault();navigateTo('home')">首页</a>
+        <a href="/profile">收藏</a>
+      </nav>
+      <div id="userArea"><a class="btn btn-ghost btn-sm" href="/login" id="headerLoginBtn">登录</a></div>
     </div>
   </header>
-
-  <!-- ===== SIDEBAR ===== -->
-  <aside class="sidebar">
-    <nav>
-      <div class="nav-section">
-        <div class="nav-label">发现</div>
-        <div class="nav-item active" data-page="home" onclick="navigateTo('home', this)">
-          <span class="icon">◉</span> 首页推荐
-        </div>
-
-        <div class="nav-item" data-page="search" onclick="navigateTo('search', this)">
-          <span class="icon">⌕</span> 聚合搜索
-        </div>
-      </div>
-
-      <div class="sidebar-divider"></div>
-
-      <div class="nav-section">
-        <div class="nav-label">分类</div>
-        <div class="nav-item" onclick="filterCategory('movie')">
-          <span class="icon">▣</span> 电影
-        </div>
-        <div class="nav-sub" id="movieSub" style="display:none;padding-left:32px">
-          <div class="nav-item active" onclick="loadSubCategory('movie','popular',this)" style="font-size:0.82rem;padding:6px 12px">热门</div>
-          <div class="nav-item" onclick="loadSubCategory('movie','now_playing',this)" style="font-size:0.82rem;padding:6px 12px">正在上映</div>
-          <div class="nav-item" onclick="loadSubCategory('movie','upcoming',this)" style="font-size:0.82rem;padding:6px 12px">即将上映</div>
-          <div class="nav-item" onclick="loadSubCategory('movie','top_rated',this)" style="font-size:0.82rem;padding:6px 12px">经典</div>
-        </div>
-        <div class="nav-item" onclick="filterCategory('tv')">
-          <span class="icon">▦</span> 剧集
-        </div>
-        <div class="nav-sub" id="tvSub" style="display:none;padding-left:32px">
-          <div class="nav-item active" onclick="loadSubCategory('tv','airing_today',this)" style="font-size:0.82rem;padding:6px 12px">今日热门</div>
-          <div class="nav-item" onclick="loadSubCategory('tv','top_rated',this)" style="font-size:0.82rem;padding:6px 12px">经典</div>
-        </div>
-        <div class="nav-item" onclick="loadAnimeCategory(this)">
-          <span class="icon">🎌</span> 动画
-        </div>
-
-        
-        
-        <div class="nav-item" data-page="profile" onclick="navigateTo('profile', this)">
-          <span class="icon">♥</span> 我的收藏
-        </div>
-      </div>
-
-      <div class="sidebar-divider"></div>
-
-      <div class="nav-section">
-        
-      </div>
-    </nav>
-  </aside>
 
   <!-- ===== MAIN ===== -->
   <main class="main-content">
@@ -2426,285 +2751,51 @@ tbody tr:last-child td {
 
     <!-- PAGE: HOME -->
     <div class="page active" id="page-home">
-      <!-- v20260807_154100 主页重做：搜索框 + 轮播 + 海报墙 + 最新收录 -->
-
-      <!-- 1. 大搜索框（顶部） -->
-      <div class="home-search-section">
-        <h1 class="home-search-title">发现精彩影视资源</h1>
-        <p class="home-search-subtitle">聚合 8+ 网盘搜索引擎 · TMDB 智能推荐</p>
-        <div class="home-search-box">
-          <span class="home-search-icon">⌕</span>
-          <input
-            type="text"
-            id="homeSearchInput"
-            placeholder="搜索电影、剧集、网盘资源..."
-            autocomplete="off"
-            onkeydown="if(event.key==='Enter') executeHomeSearch()"
-          />
-          <button class="home-search-btn" onclick="executeHomeSearch()">搜索</button>
-        </div>
-        <div class="home-search-suggestions" id="dynamicSuggestions"></div>
-      </div>
-
-      <!-- 2. 分类 chips（快速过滤） -->
-      <div class="filter-bar" style="margin-bottom:20px">
-        <div class="filter-chip active" onclick="setHomeChip(this,'all')">🔥 全部</div>
-        <div class="filter-chip" onclick="setHomeChip(this,'movie')">🎬 电影</div>
-        <div class="filter-chip" onclick="setHomeChip(this,'tv')">📺 剧集</div>
-        <div class="filter-chip" onclick="setHomeChip(this,'anime')">🎌 动画</div>
-        <div class="filter-chip" onclick="setHomeChip(this,'top_rated')">⭐ 高分</div>
-      </div>
-
-      <!-- 4. TMDB 海报墙（6 列网格） -->
-      <div class="section-header">
-        <div>
-          <h2 class="section-title" id="posterWallTitle">本周热门影视</h2>
-          <p class="section-subtitle">TMDB 实时数据 · 每周更新</p>
-        </div>
-      </div>
-      <div class="card-grid" id="posterWallGrid">
-        <!-- 动态生成 20 张海报 -->
-      </div>
-
-      <!-- 侧栏分类渲染容器（默认隐藏，仅分类导航时使用） -->
-      <div class="card-grid" id="resourceGrid" style="display:none">
-      </div>
-    </div>
-
-    <!-- PAGE: TMDB TRENDING -->
-    <div class="page" id="page-trending">
-      <div class="section-header">
-        <div>
-          <h2 class="section-title">TMDB 热门推荐</h2>
-          <p class="section-subtitle">直连 TMDB API · 每日自动更新</p>
-        </div>
-        <div class="section-actions">
-          <div class="filter-bar" style="margin:0">
-            <div class="filter-chip active" onclick="setFilter(this); loadTrending('movie')">电影</div>
-            <div class="filter-chip" onclick="setFilter(this); loadTrending('tv')">剧集</div>
+      <div class="home-search-section archive-hero">
+        <div class="archive-hero-bg" aria-hidden="true"></div>
+        <div class="archive-hero-veil" aria-hidden="true"></div>
+        <div class="archive-hero-content">
+          <p class="archive-kicker">私人胶片库</p>
+          <h1 class="home-search-title brand-mark">VaultDrive</h1>
+          <div class="hero-feature" id="heroFeature" hidden onclick="searchHeroFeature()" role="button" tabindex="0"></div>
+          <div class="home-search-box">
+            <span class="home-search-icon">⌕</span>
+            <input
+              type="text"
+              id="homeSearchInput"
+              placeholder="电影、剧集、网盘链接…"
+              autocomplete="off"
+              onkeydown="if(event.key==='Enter') executeHomeSearch()"
+            />
+            <button class="home-search-btn" onclick="executeHomeSearch()" type="button">检索</button>
           </div>
+          <div class="home-search-suggestions" id="dynamicSuggestions"></div>
         </div>
       </div>
-      <div class="card-grid" id="trendingGrid">
-        <!-- Populated by JS -->
+
+      <div class="section-header">
+        <div>
+          <h2 class="section-title" id="posterWallTitle">随便看看</h2>
+          <p class="section-subtitle">TMDB 热度气氛墙 · 点海报即可检索</p>
+        </div>
       </div>
+      <div id="posterWallGrid" class="poster-wall-masonry"></div>
+      <div class="card-grid" id="resourceGrid" style="display:none"></div>
     </div>
 
     <!-- PAGE: SEARCH -->
     <div class="page" id="page-search">
-      <div class="section-header">
-        <div>
-          <h2 class="section-title">聚合搜索</h2>
-          <p class="section-subtitle">同时查询多个网盘搜索引擎</p>
-        </div>
-      </div>
-
-      <div class="search-global" style="width:100%; max-width:100%; margin-bottom: 24px;">
-        <input type="text" id="aggSearch" placeholder="输入关键词…自动搜索多个引擎并发请求" style="height:48px; font-size:1rem; padding: 0 52px 0 20px;">
-        <button class="search-btn" onclick="executeAggSearch()" style="width:40px; height:40px; border-radius: 14px; font-size:16px;">⌕</button>
-      </div>
-
       <div id="searchResults">
         <div class="empty-state">
           <div class="empty-icon">⌕</div>
-          <div class="empty-title">开始搜索</div>
-          <div class="empty-desc">输入关键词搜索网盘资源</div>
+          <div class="empty-title">开始检索</div>
+          <div class="empty-desc">在上方输入片名或关键词，并发查询库内与多引擎</div>
         </div>
-      </div>
-    </div>
-
-    <!-- PAGE: IMPORT QUEUE -->
-    <div class="page" id="page-queue">
-      <div class="section-header">
-        <div>
-          <h2 class="section-title">导入队列</h2>
-          <p class="section-subtitle">搜索无结果时自动触发的后台处理任务</p>
-        </div>
-        <div class="section-actions">
-          <button class="btn btn-ghost btn-sm" onclick="showToast('队列已清空','success')">清空已完成</button>
-        </div>
-      </div>
-
-      <div class="queue-list" id="queueList">
-        <div class="queue-item">
-          <div class="queue-icon downloading">↓</div>
-          <div class="queue-info">
-            <div class="queue-name">流浪地球3 [2025] 4K HDR</div>
-            <div class="queue-detail">来源: 网盘A · 正在抓取元数据…</div>
-          </div>
-          <div class="progress-bar"><div class="progress-fill" style="width: 67%"></div></div>
-          <span class="status-badge pending">处理中</span>
-        </div>
-        <div class="queue-item">
-          <div class="queue-icon queued">⏳</div>
-          <div class="queue-info">
-            <div class="queue-name">黑神话：悟空 全DLC合集</div>
-            <div class="queue-detail">排队中 · 预计等待 3 分钟</div>
-          </div>
-          <div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>
-          <span class="status-badge info">排队中</span>
-        </div>
-        <div class="queue-item">
-          <div class="queue-icon done">✓</div>
-          <div class="queue-info">
-            <div class="queue-name">Chapters of Dust 高清完整版</div>
-            <div class="queue-detail">已完成 · 已入库 · 2 分钟前</div>
-          </div>
-          <div class="progress-bar"><div class="progress-fill done" style="width: 100%"></div></div>
-          <span class="status-badge success">已完成</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- PAGE: PROFILE -->
-    <div class="page" id="page-profile">
-      <div class="section-header">
-        <div>
-          <h2 class="section-title">我的收藏</h2>
-          <p class="section-subtitle">你收藏的影视资源</p>
-        </div>
-      </div>
-      <div id="profileContent">
-        <div class="loading">加载中...</div>
-      </div>
-    </div>
-
-    <!-- PAGE: ADMIN -->
-    <div class="page" id="page-admin">
-      <div class="section-header">
-        <div>
-          <h2 class="section-title">后台管理</h2>
-          <p class="section-subtitle">用户、日志、过滤词、系统统计</p>
-        </div>
-      </div>
-
-      <!-- Stats -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">总资源数</div>
-          <div class="stat-value" id="statResources">12,847</div>
-          <div class="stat-change up">↑ +234 本周</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">今日搜索</div>
-          <div class="stat-value" id="statSearches">1,247</div>
-          <div class="stat-change up">↑ 12% 较昨日</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">活跃引擎</div>
-          <div class="stat-value">6 / 6</div>
-          <div class="stat-change up">全部在线</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">待处理队列</div>
-          <div class="stat-value">2</div>
-          <div class="stat-change down">1 处理中</div>
-        </div>
-      </div>
-
-      <!-- Users Table -->
-      <div class="data-table-wrapper" style="margin-bottom: 20px;">
-        <div class="table-header">
-          <h3>用户管理</h3>
-          <button class="btn btn-ghost btn-sm" onclick="showModal('addUserModal')">+ 添加用户</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>用户名</th>
-              <th>角色</th>
-              <th>搜索次数</th>
-              <th>最后活跃</th>
-              <th>状态</th>
-              <th>GitHub</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>admin</strong></td>
-              <td><span class="tag gold">管理员</span></td>
-              <td style="font-family:var(--font-mono); font-size:0.82rem;">8,432</td>
-              <td>刚刚</td>
-              <td><span class="status-badge success">● 在线</span></td>
-            </tr>
-            <tr>
-              <td>user_viewer</td>
-              <td><span class="tag">只读</span></td>
-              <td style="font-family:var(--font-mono); font-size:0.82rem;">1,247</td>
-              <td>2 小时前</td>
-              <td><span class="status-badge info">● 离线</span></td>
-            </tr>
-            <tr>
-              <td>bot_crawler</td>
-              <td><span class="tag blue">系统</span></td>
-              <td style="font-family:var(--font-mono); font-size:0.82rem;">—</td>
-              <td>运行中</td>
-              <td><span class="status-badge pending">● 自动化</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Filter Words Table -->
-      <div class="data-table-wrapper">
-        <div class="table-header">
-          <h3>过滤词管理</h3>
-          <button class="btn btn-ghost btn-sm" onclick="showToast('过滤词已同步','success')">同步到搜索引擎</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>关键词</th>
-              <th>类型</th>
-              <th>命中次数</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><span style="font-family:var(--font-mono); color:var(--accent-red);">赌博</span></td>
-              <td><span class="tag" style="color:var(--accent-red);">黑名单</span></td>
-              <td style="font-family:var(--font-mono); font-size:0.82rem;">342</td>
-              <td><button class="btn btn-ghost btn-sm" style="color:var(--accent-red);">删除</button></td>
-            </tr>
-            <tr>
-              <td><span style="font-family:var(--font-mono); color:var(--accent-red);">色情</span></td>
-              <td><span class="tag" style="color:var(--accent-red);">黑名单</span></td>
-              <td style="font-family:var(--font-mono); font-size:0.82rem;">891</td>
-              <td><button class="btn btn-ghost btn-sm" style="color:var(--accent-red);">删除</button></td>
-            </tr>
-            <tr>
-              <td><span style="font-family:var(--font-mono); color:var(--accent-green);">4K</span></td>
-              <td><span class="tag green">白名单</span></td>
-              <td style="font-family:var(--font-mono); font-size:0.82rem;">1,204</td>
-              <td><button class="btn btn-ghost btn-sm" style="color:var(--accent-red);">删除</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- PAGE: LOGS -->
-    <div class="page" id="page-logs">
-      <div class="section-header">
-        <div>
-          <h2 class="section-title">系统日志</h2>
-          <p class="section-subtitle">实时运行日志 · Gunicorn + Flask 后端</p>
-        </div>
-        <div class="section-actions">
-          <button class="btn btn-ghost btn-sm" onclick="showToast('日志已导出','success')">导出日志</button>
-          <button class="btn btn-ghost btn-sm" onclick="refreshLogs()">↻ 刷新</button>
-        </div>
-      </div>
-      <div class="log-viewer" id="logViewer">
-        <!-- Populated by JS -->
       </div>
     </div>
 
   </main>
 </div>
-
 <!-- ===== MODALS ===== -->
 <div class="modal-overlay" id="loginModal" onclick="if(event.target===this) hideModal('loginModal')">
   <div class="modal">
@@ -2900,8 +2991,68 @@ async function loadTrendingMovies() {
   } catch(e) { console.error('loadTrending error:', e); }
 }
 
-// v20260807_154100: 主页 TMDB 海报墙
+// v20260807_154100: 主页 TMDB 海报墙（交错列）
 let POSTER_WALL_TYPE = 'all';  // 'all' | 'movie' | 'tv' | 'anime' | 'top_rated'
+
+function posterWallColCount() {
+  const w = window.innerWidth || 1200;
+  if (w <= 768) return 3;
+  if (w <= 1200) return 5;
+  return 7;
+}
+
+/** 轮询均分，避免短列留大块空白；总数取列数整数倍 */
+function distributePosterItems(items, cols) {
+  const n = Math.floor(items.length / cols) * cols;
+  const list = items.slice(0, n || items.length);
+  const columns = Array.from({ length: cols }, () => []);
+  list.forEach((it, i) => columns[i % cols].push(it));
+  return columns;
+}
+
+function renderPosterWallSkeleton(grid) {
+  const cols = posterWallColCount();
+  const per = 3;
+  grid.innerHTML = Array.from({ length: cols }, () =>
+    `<div class="poster-col">${Array.from({ length: per }, () =>
+      '<div class="poster-skel skeleton-pulse"></div>'
+    ).join('')}</div>`
+  ).join('');
+}
+
+function renderPosterCard(it) {
+  const poster = it.poster || it.backdrop || '';
+  const year = it.year || it.date || '';
+  const rating = it.rating || '';
+  const tmdbId = it.tmdb_id || it.id || '';
+  const mediaType = it.media_type || 'movie';
+  const titleEsc = esc(it.title || '');
+  const posterEsc = esc(poster);
+  const titleJs = (it.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return `
+    <div class="resource-card poster-wall-card" onclick="searchResource('${titleJs}')" style="cursor:pointer">
+      <div class="poster-wrap">
+        <img src="${posterEsc}" alt="${titleEsc}" loading="lazy" class="poster-item"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"/>
+        <div style="display:none;position:absolute;inset:0;background:var(--bg-card);place-items:center;color:var(--text-muted);font-size:0.75rem">无海报</div>
+        <button type="button" class="poster-fav-btn"
+          data-tmdb-id="${tmdbId}"
+          data-media-type="${esc(mediaType)}"
+          data-title="${titleEsc}"
+          data-poster="${posterEsc}"
+          data-year="${esc(String(year))}"
+          data-rating="${esc(String(rating))}"
+          onclick="event.stopPropagation();toggleWatchlist(this)"
+          title="收藏">♡</button>
+        ${rating ? `<div class="poster-rating">★ ${rating}</div>` : ''}
+        <div class="poster-overlay">
+          <div class="poster-overlay-title">${titleEsc}</div>
+          <div class="poster-overlay-text">⌕ 搜索资源</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
 async function loadPosterWall(type) {
   POSTER_WALL_TYPE = type;
@@ -2911,14 +3062,14 @@ async function loadPosterWall(type) {
 
   const titles = {
     all: '本周热门影视',
-    movie: '🔥 本周热门电影',
-    tv: '📺 本周热门剧集',
-    anime: '🎌 热门动画',
-    top_rated: '⭐ 高分经典'
+    movie: '本周热门电影',
+    tv: '本周热门剧集',
+    anime: '热门动画',
+    top_rated: '高分经典'
   };
   if (title) title.textContent = titles[type] || titles.all;
 
-  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-secondary)">⏳ 加载海报墙…</div>';
+  renderPosterWallSkeleton(grid);
 
   try {
     let url = '/api/tmdb/trending?type=';
@@ -2930,13 +3081,13 @@ async function loadPosterWall(type) {
 
     const r = await fetch(url);
     const d = await r.json();
-    let items = (d.items || []).slice(0, 20);
+    // 无海报的条目会留下空白格，先丢掉
+    let items = (d.items || []).filter(it => it.poster || it.backdrop);
 
     // v20260808: 每次刷新随机 shuffle — 前3固定热门，后面随机排序
     if (items.length > 3) {
       const top3 = items.slice(0, 3);
       const rest = items.slice(3);
-      // 每次用时间戳做 seed，真正随机
       let seed = Date.now();
       const rand = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
       for (let i = rest.length - 1; i > 0; i--) {
@@ -2946,41 +3097,115 @@ async function loadPosterWall(type) {
       items = [...top3, ...rest];
     }
 
+    const cols = posterWallColCount();
+    const perCol = 3;
+    items = items.slice(0, cols * perCol);
+
     if (!items.length) {
-      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-secondary)">暂无数据</div>';
+      grid.innerHTML = '<div style="width:100%;text-align:center;padding:60px;color:var(--text-secondary)">暂无数据</div>';
       return;
     }
 
-    grid.innerHTML = items.map((it, i) => {
-      const poster = it.poster || it.backdrop || '';
-      const year = it.year || it.date || '';
-      const rating = it.rating || '';
-      return `
-        <div class="resource-card poster-wall-card" onclick="searchResource('${(it.title || '').replace(/'/g, "\\'")}')" style="cursor:pointer">
-          <div class="poster-wrap">
-            <img src="${poster}" alt="${it.title || ''}" loading="lazy"
-                 onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"
-                 style="width:100%;aspect-ratio:2/3;object-fit:cover;background:var(--bg-card)"/>
-            <div style="display:none;width:100%;aspect-ratio:2/3;background:var(--bg-card);align-items:center;justify-content:center;color:var(--text-muted);font-size:0.75rem">无海报</div>
-            ${rating ? `<div class="poster-rating">★ ${rating}</div>` : ''}
-            <div class="poster-overlay">
-              <div class="poster-overlay-text">⌕ 搜索资源</div>
-            </div>
-          </div>
-          <div class="poster-info">
-            <div class="poster-title">${it.title || ''}</div>
-            <div class="poster-meta">
-              ${year ? '<span>' + year + '</span>' : ''}
-              ${it.media_type === 'movie' ? '<span class="dot">·</span><span>电影</span>' : ''}
-              ${it.media_type === 'tv' ? '<span class="dot">·</span><span>剧集</span>' : ''}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
+    paintArchiveHero(items);
+
+    const columns = distributePosterItems(items, cols);
+    grid.innerHTML = columns.map((col) =>
+      `<div class="poster-col">${col.map(renderPosterCard).join('')}</div>`
+    ).join('');
+    checkWatchlistStatus();
   } catch (e) {
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--error,#f85149)">加载失败: ' + e.message + '</div>';
+    grid.innerHTML = '<div style="width:100%;text-align:center;padding:60px;color:var(--error,#f85149)">加载失败: ' + e.message + '</div>';
   }
+}
+
+// v20260816: 首屏胶片墙 — 用 TMDB 海报铺成缓慢漂移的背景
+const TMDB_GENRE_ZH = {
+  28: '动作', 12: '冒险', 16: '动画', 35: '喜剧', 80: '犯罪', 99: '纪录',
+  18: '剧情', 10751: '家庭', 14: '奇幻', 36: '历史', 27: '恐怖', 10402: '音乐',
+  9648: '悬疑', 10749: '爱情', 878: '科幻', 10770: '电视电影', 53: '惊悚',
+  10752: '战争', 37: '西部', 10759: '动作冒险', 10762: '儿童', 10763: '新闻',
+  10764: '真人秀', 10765: '科幻奇幻', 10766: '肥皂剧', 10767: '脱口秀', 10768: '战争政治'
+};
+let HERO_FEATURE_ITEMS = [];
+let HERO_FEATURE_IDX = 0;
+let HERO_FEATURE_TIMER = null;
+
+function formatHeroGenreLine(it) {
+  const names = (it.genre_ids || [])
+    .map(id => TMDB_GENRE_ZH[id])
+    .filter(Boolean)
+    .slice(0, 2);
+  const kind = it.media_type === 'tv' ? '剧集' : (it.media_type === 'movie' ? '电影' : '');
+  const parts = names.length ? names : [kind, it.year].filter(Boolean);
+  if (names.length && it.year) parts.push(it.year);
+  return parts.join(' · ') || '热门精选';
+}
+
+function paintHeroFeature(items) {
+  const el = document.getElementById('heroFeature');
+  if (!el) return;
+  const list = (items || []).filter(it => it.title && (it.overview || '').trim());
+  if (!list.length) {
+    el.hidden = true;
+    return;
+  }
+  HERO_FEATURE_ITEMS = list.slice(0, 8);
+  HERO_FEATURE_IDX = 0;
+  el.hidden = false;
+  renderHeroFeature(false);
+  if (HERO_FEATURE_TIMER) clearInterval(HERO_FEATURE_TIMER);
+  if (HERO_FEATURE_ITEMS.length > 1) {
+    HERO_FEATURE_TIMER = setInterval(() => {
+      HERO_FEATURE_IDX = (HERO_FEATURE_IDX + 1) % HERO_FEATURE_ITEMS.length;
+      renderHeroFeature(true);
+    }, 7000);
+  }
+}
+
+function renderHeroFeature(animate) {
+  const el = document.getElementById('heroFeature');
+  const it = HERO_FEATURE_ITEMS[HERO_FEATURE_IDX];
+  if (!el || !it) return;
+  const paint = () => {
+    el.innerHTML = `
+      <p class="hero-feature-genre">${esc(formatHeroGenreLine(it))}</p>
+      <h4 class="hero-feature-title">${esc(it.title || '')}</h4>
+      <p class="hero-feature-overview">${esc(it.overview || '')}</p>
+    `;
+    el.dataset.title = it.title || '';
+    el.classList.remove('is-fading');
+  };
+  if (animate) {
+    el.classList.add('is-fading');
+    setTimeout(paint, 280);
+  } else {
+    paint();
+  }
+}
+
+function searchHeroFeature() {
+  const el = document.getElementById('heroFeature');
+  const title = (el && el.dataset.title) || '';
+  if (title) searchResource(title);
+}
+
+function paintArchiveHero(items) {
+  const bg = document.querySelector('.archive-hero-bg');
+  if (!bg || !items || !items.length) return;
+  const posters = items
+    .map(it => it.poster || it.backdrop || '')
+    .filter(Boolean)
+    .slice(0, 24);
+  if (!posters.length) return;
+  // 铺满 8 列网格：循环补齐
+  while (posters.length < 24) posters.push(...posters.slice(0, Math.min(8, posters.length)));
+  bg.classList.add('has-mosaic');
+  bg.innerHTML = posters.slice(0, 24).map((src, i) =>
+    `<div class="archive-hero-tile" style="animation-delay:${(i % 8) * 0.08}s"><img src="${src}" alt="" loading="lazy" decoding="async"></div>`
+  ).join('');
+  paintHeroFeature(items);
+  // 海报墙就绪后再洗一次建议词（混入真实热门片名）
+  try { loadDynamicSuggestions(items); } catch (e) {}
 }
 
 // v20260807_154100: 主页 chips 切换
@@ -2997,39 +3222,105 @@ function executeHomeSearch() {
   searchResource(q);
 }
 
-// v20260808: 每次刷新随机抽4个搜索建议词
-(function loadDynamicSuggestions() {
-  const pool = [
-    { q: '蜘蛛侠', icon: '🔥', cat: 'movie' },
-    { q: '奥德赛', icon: '🎬', cat: 'movie' },
-    { q: '权力的游戏', icon: '📺', cat: 'tv' },
-    { q: '4K HDR', icon: '📦', cat: 'tech' },
-    { q: '鬼灭之刃', icon: '🎌', cat: 'anime' },
-    { q: '龙珠', icon: '🎌', cat: 'anime' },
-    { q: '釜山行', icon: '🧟', cat: 'horror' },
-    { q: '僵尸', icon: '🧟', cat: 'horror' },
-    { q: '周星驰', icon: '🎭', cat: 'actor' },
-    { q: '宫崎骏', icon: '🎨', cat: 'anime' },
-    { q: '刘德华', icon: '🎭', cat: 'actor' },
-    { q: '张艺谋', icon: '🎭', cat: 'director' },
-    { q: '9K HDR', icon: '📦', cat: 'tech' },
-    { q: '蓝光原盘', icon: '💿', cat: 'tech' },
-    { q: '星际穿越', icon: '🚀', cat: 'scifi' },
-    { q: '沙丘', icon: '🏜️', cat: 'scifi' },
-    { q: '新片推荐', icon: '✨', cat: 'new' },
-    { q: '年度榜单', icon: '🏆', cat: 'list' },
-    { q: 'Netflix原创', icon: '🎬', cat: 'streaming' },
-    { q: 'Disney+', icon: '🏰', cat: 'streaming' }
-  ];
-  // 每次刷新随机洗牌
-  let seed = Date.now();
-  const rand = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
-  const shuffled = pool.slice().sort(() => rand() - 0.5);
+// v20260817: 搜索建议 — 真随机 + 类目打散 + 避开上次结果 + 混入热门片名
+const SUGGESTION_ICONS = ['🔥','🎬','📺','📦','🎌','🧟','🎭','🎨','🚀','🏜️','✨','🏆','🏰','💿','🎸','🧊','🌙','⚡'];
+
+const SUGGESTION_POOL = [
+  { q: '蜘蛛侠', cat: 'movie' }, { q: '奥德赛', cat: 'movie' }, { q: '权力的游戏', cat: 'tv' },
+  { q: '4K HDR', cat: 'tech' }, { q: '鬼灭之刃', cat: 'anime' }, { q: '龙珠', cat: 'anime' },
+  { q: '釜山行', cat: 'horror' }, { q: '周星驰', cat: 'actor' }, { q: '宫崎骏', cat: 'anime' },
+  { q: '刘德华', cat: 'actor' }, { q: '张艺谋', cat: 'director' }, { q: '蓝光原盘', cat: 'tech' },
+  { q: '星际穿越', cat: 'scifi' }, { q: '沙丘', cat: 'scifi' }, { q: '新片推荐', cat: 'new' },
+  { q: 'Netflix', cat: 'streaming' }, { q: 'Disney+', cat: 'streaming' }, { q: '黑镜', cat: 'tv' },
+  { q: '进击的巨人', cat: 'anime' }, { q: '流浪地球', cat: 'scifi' }, { q: '疯狂动物城', cat: 'movie' },
+  { q: '三体', cat: 'scifi' }, { q: '奥本海默', cat: 'movie' }, { q: '芭比', cat: 'movie' },
+  { q: '漫长的季节', cat: 'tv' }, { q: '狂飙', cat: 'tv' }, { q: '去有风的地方', cat: 'tv' },
+  { q: '灌篮高手', cat: 'anime' }, { q: '海贼王', cat: 'anime' }, { q: '咒术回战', cat: 'anime' },
+  { q: '诺兰', cat: 'director' }, { q: '克里斯托弗·诺兰', cat: 'director' }, { q: '昆汀', cat: 'director' },
+  { q: '成龙', cat: 'actor' }, { q: '梁朝伟', cat: 'actor' }, { q: '汤姆·克鲁斯', cat: 'actor' },
+  { q: '阿凡达', cat: 'movie' }, { q: '泰坦尼克号', cat: 'movie' }, { q: '盗梦空间', cat: 'scifi' },
+  { q: '西部世界', cat: 'tv' }, { q: '绝命毒师', cat: 'tv' }, { q: '老友记', cat: 'tv' },
+  { q: 'Dolby Vision', cat: 'tech' }, { q: '杜比视界', cat: 'tech' }, { q: 'IMAX', cat: 'tech' },
+  { q: '港剧', cat: 'tv' }, { q: '日剧', cat: 'tv' }, { q: '韩剧', cat: 'tv' },
+  { q: '纪录片', cat: 'doc' }, { q: '相声', cat: 'variety' }, { q: '演唱会', cat: 'music' },
+  { q: '变形金刚', cat: 'movie' }, { q: '速度与激情', cat: 'movie' }, { q: '碟中谍', cat: 'movie' },
+  { q: '复联', cat: 'movie' }, { q: '蝙蝠侠', cat: 'movie' }, { q: '小丑', cat: 'movie' },
+  { q: '权游', cat: 'tv' }, { q: '漫威', cat: 'movie' }, { q: 'DC', cat: 'movie' },
+  { q: '你的名字', cat: 'anime' }, { q: '千与千寻', cat: 'anime' }, { q: '铃芽之旅', cat: 'anime' },
+  { q: '美剧', cat: 'tv' }, { q: '英剧', cat: 'tv' }, { q: '独立电影', cat: 'movie' }
+];
+
+function _suggestRand() {
+  try {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return buf[0] / 4294967296;
+  } catch (e) {
+    return Math.random();
+  }
+}
+
+function _shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(_suggestRand() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function _pickDiverseSuggestions(pool, n) {
+  const last = (() => {
+    try { return JSON.parse(sessionStorage.getItem('vd_suggest_last') || '[]'); }
+    catch (e) { return []; }
+  })();
+  const lastSet = new Set(last);
+  let candidates = pool.filter(s => s.q && !lastSet.has(s.q));
+  if (candidates.length < n) candidates = pool.slice();
+  _shuffleInPlace(candidates);
+
+  const picked = [];
+  const usedCat = new Set();
+  // 先尽量不同类目
+  for (const s of candidates) {
+    if (picked.length >= n) break;
+    const cat = s.cat || 'x';
+    if (usedCat.has(cat) && picked.length < n - 1) continue;
+    picked.push(s);
+    usedCat.add(cat);
+  }
+  // 补足
+  for (const s of candidates) {
+    if (picked.length >= n) break;
+    if (picked.some(p => p.q === s.q)) continue;
+    picked.push(s);
+  }
+  try { sessionStorage.setItem('vd_suggest_last', JSON.stringify(picked.map(p => p.q))); }
+  catch (e) {}
+  return picked;
+}
+
+function renderSuggestionTags(items) {
   const el = document.getElementById('dynamicSuggestions');
-  if (el) el.innerHTML = shuffled.slice(0, 4).map(s =>
-    '<span class="suggestion-tag" onclick="quickSearch(\'' + s.q + '\')">' + s.icon + ' ' + s.q + '</span>'
-  ).join('');
-})();
+  if (!el) return;
+  el.innerHTML = items.map(s => {
+    const icon = s.icon || SUGGESTION_ICONS[Math.floor(_suggestRand() * SUGGESTION_ICONS.length)];
+    const qJs = String(s.q).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return '<span class="suggestion-tag" onclick="quickSearch(\'' + qJs + '\')">' + icon + ' ' + esc(s.q) + '</span>';
+  }).join('');
+}
+
+function loadDynamicSuggestions(extraTitles) {
+  const extras = (extraTitles || [])
+    .map(t => (typeof t === 'string' ? t : (t && t.title) || ''))
+    .filter(Boolean)
+    .map(title => ({ q: title, cat: 'hot', icon: '✨' }));
+  // 热门片名最多掺 2 个，其余来自大词库，避免老四样
+  _shuffleInPlace(extras);
+  const mix = extras.slice(0, 2).concat(SUGGESTION_POOL);
+  renderSuggestionTags(_pickDiverseSuggestions(mix, 4));
+}
+
+loadDynamicSuggestions();
 
 function quickSearch(q) {
   document.getElementById('homeSearchInput').value = q;
@@ -3100,12 +3391,11 @@ async function checkAdminAndNavigate(pageId, el) {
       navigateTo(pageId, el);
     } else {
       showToast('需要管理员权限，请先登录', 'error');
-      // 显示登录提示
-      showAdminLoginModal();
+      window.location.href = '/login';
     }
   } catch(e) {
     showToast('请先登录管理员账号', 'error');
-    showAdminLoginModal();
+    window.location.href = '/login';
   }
 }
 
@@ -3159,9 +3449,9 @@ async function doAdminLogin(e) {
     });
     const d = await r.json();
     if (d.ok) {
-      document.getElementById('adminLoginModal').classList.remove('show');
-      showToast('登录成功', 'success'); window.location.href='/admin';
-      navigateTo('admin', document.querySelector('[data-page="admin"]'));
+      document.getElementById('adminLoginModal')?.classList.remove('show');
+      showToast('登录成功', 'success');
+      window.location.href = (d.role === 'admin') ? '/admin' : '/';
     } else {
       showToast(d.error || '用户名或密码错误', 'error');
     }
@@ -3172,26 +3462,28 @@ async function doAdminLogin(e) {
 
 function navigateTo(pageId, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
   const target = document.getElementById('page-' + pageId);
   if (target) target.classList.add('active');
-  if (el) el.classList.add('active');
   APP.currentPage = pageId;
 
-  // 回到首页时显示section-header和filter-bar，恢复海报墙、隐藏分类容器
+  const app = document.getElementById('app');
+  if (app) {
+    app.classList.toggle('mode-home', pageId === 'home');
+    app.classList.toggle('mode-search', pageId === 'search');
+  }
+
   if (pageId === 'home') {
-    document.querySelectorAll('.section-header').forEach(h => h.style.display = '');
-    document.querySelectorAll('.filter-bar').forEach(b => b.style.display = '');
+    document.querySelectorAll('#page-home .section-header').forEach(h => h.style.display = '');
     const wall = document.getElementById('posterWallGrid');
     if (wall) wall.style.display = '';
     const grid = document.getElementById('resourceGrid');
     if (grid) grid.style.display = 'none';
   }
 
-  // Initialize pages on first visit
-  if (pageId === 'trending') loadTrending('movie');
-  if (pageId === 'logs') refreshLogs();
-  if (pageId === 'profile') loadProfileFavorites();
+  if (pageId === 'search') {
+    const g = document.getElementById('globalSearch');
+    if (g && !g.value && APP.searchQuery) g.value = APP.searchQuery;
+  }
 }
 
 
@@ -3209,7 +3501,7 @@ async function loadProfileFavorites() {
     if (items.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-icon">📭</div>
+          <div class="empty-state-icon">◇</div>
           <div>还没有收藏任何资源</div>
           <div style="margin-top:8px;font-size:0.85rem">浏览首页，点击资源卡片上的收藏按钮添加</div>
           <a href="/" class="btn btn-primary" style="margin-top:20px;display:inline-block">去逛逛</a>
@@ -3267,14 +3559,40 @@ async function removeProfileFav(rid, btn) {
   }
 }
 
-async function toggleFavorite(btn, rid) {
-  if (!btn) return;
-  const isFav = btn.classList.contains('is-fav');
-  const method = isFav ? 'DELETE' : 'POST';
-  const url = `/api/favorites/${rid}`;
+async function getCsrfToken() {
+  if (window._csrfToken) return window._csrfToken;
   try {
-    const r = await fetch(url, { method });
+    const r = await fetch('/api/csrf-token');
     const d = await r.json();
+    window._csrfToken = d.csrf_token || '';
+  } catch (e) {
+    window._csrfToken = '';
+  }
+  return window._csrfToken;
+}
+
+async function toggleFavorite(btn, rid) {
+  if (!btn || !rid) return;
+  const isFav = btn.classList.contains('is-fav');
+  const csrf = await getCsrfToken();
+  try {
+    let r;
+    if (isFav) {
+      r = await fetch(`/api/favorites/${rid}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrf }
+      });
+    } else {
+      r = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrf
+        },
+        body: JSON.stringify({ resource_id: rid })
+      });
+    }
+    const d = await r.json().catch(() => ({}));
     if (d.ok || d.success) {
       if (isFav) {
         btn.classList.remove('is-fav');
@@ -3300,6 +3618,64 @@ async function toggleFavorite(btn, rid) {
   }
 }
 
+async function toggleWatchlist(btn) {
+  if (!btn) return;
+  const tmdbId = parseInt(btn.getAttribute('data-tmdb-id'), 10);
+  const mediaType = btn.getAttribute('data-media-type') || 'movie';
+  if (!tmdbId) {
+    showToast('无法收藏：缺少 TMDB ID', 'error');
+    return;
+  }
+  const isFav = btn.classList.contains('is-fav');
+  const csrf = await getCsrfToken();
+  try {
+    let r;
+    if (isFav) {
+      r = await fetch(`/api/watchlist/${tmdbId}?media_type=${encodeURIComponent(mediaType)}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrf }
+      });
+    } else {
+      r = await fetch('/api/watchlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrf
+        },
+        body: JSON.stringify({
+          tmdb_id: tmdbId,
+          media_type: mediaType,
+          title: btn.getAttribute('data-title') || '',
+          poster: btn.getAttribute('data-poster') || '',
+          year: btn.getAttribute('data-year') || '',
+          rating: btn.getAttribute('data-rating') || ''
+        })
+      });
+    }
+    const d = await r.json().catch(() => ({}));
+    if (d.ok || d.success) {
+      if (isFav) {
+        btn.classList.remove('is-fav');
+        btn.textContent = '♡';
+        btn.title = '收藏';
+        showToast('已取消收藏');
+      } else {
+        btn.classList.add('is-fav');
+        btn.textContent = '♥';
+        btn.title = '取消收藏';
+        showToast('已收藏', 'success');
+      }
+    } else if (r.status === 401) {
+      showToast('请先登录后再收藏', 'error');
+      window.location.href = '/login';
+    } else {
+      showToast(d.error || '操作失败', 'error');
+    }
+  } catch (e) {
+    showToast('网络错误', 'error');
+  }
+}
+
 async function checkFavoriteStatus(rids) {
   if (!rids.length) return;
   try {
@@ -3316,6 +3692,26 @@ async function checkFavoriteStatus(rids) {
       }
     });
   } catch(e) {}
+}
+
+async function checkWatchlistStatus() {
+  const buttons = document.querySelectorAll('.poster-fav-btn[data-tmdb-id]');
+  if (!buttons.length) return;
+  try {
+    const r = await fetch('/api/watchlist');
+    if (r.status === 401) return;
+    const d = await r.json();
+    if (!d.items) return;
+    const keys = new Set(d.items.map(it => `${it.tmdb_id}:${it.media_type || 'movie'}`));
+    buttons.forEach(btn => {
+      const key = `${btn.getAttribute('data-tmdb-id')}:${btn.getAttribute('data-media-type') || 'movie'}`;
+      if (keys.has(key)) {
+        btn.classList.add('is-fav');
+        btn.textContent = '♥';
+        btn.title = '取消收藏';
+      }
+    });
+  } catch (e) {}
 }
 
 
@@ -3459,51 +3855,53 @@ function renderSearchResults(results, total, hasMore) {
     // 翻页/替换时短暂淡化，避免 innerHTML 替换闪烁
     container.style.transition = 'none';
     container.style.opacity = '0.3';
-    // 按来源分组统计
+    // 按来源分组统计（「全部」时缓存 chip 数量，筛选后仍显示全来源）
     const grouped = {};
     results.forEach(r => {
       const src = r.source || '未知';
       if (!grouped[src]) grouped[src] = [];
       grouped[src].push(r);
     });
-
-    const sources = Object.keys(grouped).sort((a, b) => grouped[b].length - grouped[a].length);
+    if (!APP.sourceFilter || APP.sourceFilter === 'all') {
+      APP.sourceChipStats = {};
+      Object.keys(grouped).forEach(src => { APP.sourceChipStats[src] = grouped[src].length; });
+      APP.sourceChipStats._total = total;
+    }
+    const chipStats = APP.sourceChipStats || {};
+    const sources = Object.keys(chipStats).filter(k => k !== '_total').sort((a, b) => (chipStats[b]||0) - (chipStats[a]||0));
 
     const sourceColors = {quark:'#e4a853', aliyun:'#58a6ff', baidu:'#3fb950', xunlei:'#f85149', tianyi:'#bc8cff', 115:'#ff7b72', uc:'#79c0ff', pikpak:'#d2a8ff', guangya:'#00bcd4', magnet:'#9c27b0', thunder:'#00bcd4', '123':'#ff9800', yidong:'#4caf50'};
     const sourceNames = {quark:'夸克网盘', aliyun:'阿里云盘', baidu:'百度网盘', xunlei:'迅雷网盘', tianyi:'天翼网盘', 115:'115网盘', uc:'UC网盘', pikpak:'PikPak', guangya:'光鸭盘', magnet:'磁力链接', thunder:'迅雷链接', '123':'123云盘', yidong:'移动云'};
 
-    // 筛选状态
+    // 筛选状态：API 已按 source 过滤时，results 即当前源
     if (!APP.sourceFilter) APP.sourceFilter = 'all';
-
-    // 筛选后的结果
-    const filteredResults = APP.sourceFilter === 'all' ? results : results.filter(r => r.source === APP.sourceFilter);
-
-    // v20260807_151749: 分页根据筛选状态分别计算
-    // - "全部"：用后端 total + APP.pageSize（真正的分页）
-    // - 某个网盘类型：当前页已显示所有结果，不再分页（避免误导）
     const isFiltered = APP.sourceFilter !== 'all';
-    const totalPages = isFiltered ? 1 : Math.ceil(total / APP.pageSize);
+    const filteredResults = results;
+    const chipTotal = (chipStats._total != null) ? chipStats._total : total;
+
+    // v20260807_151749: 分页——筛选后用后端该源 total
+    const totalPages = Math.ceil(total / APP.pageSize) || 1;
     const currentPage = APP.searchPage || 1;
     
     container.innerHTML = `
       <div style="margin-bottom:16px">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-          <div style="font-size:1.1rem;font-weight:600">找到 <span style="color:var(--blue)">${isFiltered ? filteredResults.length : total}</span> 条结果${isFiltered && filteredResults.length !== total ? ` <span style="font-size:.75rem;color:var(--text-secondary);font-weight:400">（筛选自 ${total} 条）</span>` : ''}</div>
-          ${isFiltered ? '' : `<div style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--text-secondary)">
+          <div style="font-size:1.1rem;font-weight:600">找到 <span style="color:var(--blue)">${total}</span> 条结果${isFiltered && chipTotal !== total ? ` <span style="font-size:.75rem;color:var(--text-secondary);font-weight:400">（筛选自 ${chipTotal} 条）</span>` : ''}</div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--text-secondary)">
             每页
             <select id="pageSizeSelect" onchange="changePageSize(this.value)" style="background:var(--bg-card);border:1px solid var(--border-medium);color:var(--text-primary);padding:3px 6px;border-radius:6px;font-size:.75rem;cursor:pointer">
               ${[10,20,30,50].map(n => '<option value="' + n + '"' + (n === APP.pageSize ? ' selected' : '') + '>' + n + '</option>').join('')}
             </select>
             条
-          </div>`}
+          </div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <span onclick="filterBySource('all')" style="background:${APP.sourceFilter === 'all' ? 'var(--blue)' : 'rgba(255,255,255,0.1)'};color:${APP.sourceFilter === 'all' ? '#fff' : 'var(--text-secondary)'};padding:4px 12px;border-radius:16px;font-size:.75rem;font-weight:500;cursor:pointer;transition:all 0.2s">
-            全部 <strong>${results.length}</strong>
+          <span onclick="filterBySource('all')" style="background:${APP.sourceFilter === 'all' ? 'var(--green)' : 'rgba(18,26,36,0.06)'};color:${APP.sourceFilter === 'all' ? '#fff' : 'var(--text-secondary)'};padding:4px 12px;border-radius:16px;font-size:.75rem;font-weight:500;cursor:pointer;transition:all 0.2s;border:1px solid ${APP.sourceFilter === 'all' ? 'var(--green)' : 'var(--border)'}">
+            全部 <strong>${chipTotal}</strong>
           </span>
           ${sources.map(src => `
-            <span onclick="filterBySource('${src}')" style="background:${APP.sourceFilter === src ? (sourceColors[src]||'var(--text-muted)') : (sourceColors[src]||'var(--text-muted)')+'15'};color:${APP.sourceFilter === src ? '#fff' : (sourceColors[src]||'var(--text-muted)')};padding:4px 12px;border-radius:16px;font-size:.75rem;font-weight:500;cursor:pointer;transition:all 0.2s">
-              ● ${sourceNames[src]||src} <strong>${grouped[src].length}</strong>
+            <span onclick="filterBySource('${src}')" style="background:${APP.sourceFilter === src ? (sourceColors[src]||'var(--text-muted)') : 'rgba(18,26,36,0.04)'};color:${APP.sourceFilter === src ? '#fff' : (sourceColors[src]||'var(--text-muted)')};padding:4px 12px;border-radius:16px;font-size:.75rem;font-weight:500;cursor:pointer;transition:all 0.2s;border:1px solid ${APP.sourceFilter === src ? (sourceColors[src]||'var(--border)') : 'var(--border-subtle)'}">
+              ${sourceNames[src]||src} <strong>${chipStats[src]||0}</strong>
             </span>
           `).join('')}
         </div>
@@ -3523,7 +3921,7 @@ function renderSearchResults(results, total, hasMore) {
               </div>
               <div style="display:flex;gap:6px;flex-shrink:0">
                 <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();copyToClipboard('${(r.url||'').replace(/'/g,"\'")}')" style="font-size:.72rem;padding:4px 8px">复制</button>
-                <button class="btn btn-ghost btn-sm" data-id="${r.id}" onclick="event.stopPropagation();toggleFavorite(this,${r.id})" style="font-size:.72rem;padding:4px 8px">♡</button>
+                <button class="btn btn-ghost btn-sm fav-btn" data-id="${r.id}" onclick="event.stopPropagation();toggleFavorite(this,${r.id})" style="font-size:.72rem;padding:4px 8px">♡</button>
                 ${isMagnet ? '' : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();window.open('${(r.url||'').replace(/'/g,"\'")}','_blank')" style="font-size:.72rem;padding:4px 8px">打开</button>`}
               </div>
             </div>
@@ -3532,7 +3930,7 @@ function renderSearchResults(results, total, hasMore) {
       </div>
       ${totalPages > 1 ? `
         <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:20px 0;flex-wrap:wrap">
-          <button onclick="goSearchPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} style="padding:6px 12px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);color:${currentPage <= 1 ? 'var(--text-muted) ' : 'var(--blue)'};border-radius:8px;cursor:${currentPage <= 1 ? 'default' : 'pointer'};font-size:.8rem">‹ 上一页</button>
+          <button onclick="goSearchPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} style="padding:6px 12px;background:rgba(10,107,92,0.1);border:1px solid rgba(10,107,92,0.2);color:${currentPage <= 1 ? 'var(--text-muted) ' : 'var(--blue)'};border-radius:8px;cursor:${currentPage <= 1 ? 'default' : 'pointer'};font-size:.8rem">‹ 上一页</button>
           ${Array.from({length: Math.min(totalPages, 7)}, (_, i) => {
             let p;
             if (totalPages <= 7) p = i + 1;
@@ -3541,7 +3939,7 @@ function renderSearchResults(results, total, hasMore) {
             else p = currentPage - 3 + i;
             return '<button onclick="goSearchPage(' + p + ')" style="padding:6px 12px;background:' + (p === currentPage ? 'var(--blue)' : 'rgba(255,255,255,0.05)') + ';border:1px solid ' + (p === currentPage ? 'var(--blue)' : 'var(--border-subtle)') + ';color:' + (p === currentPage ? '#fff' : 'var(--text-secondary)') + ';border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:' + (p === currentPage ? '600' : '400') + '">' + p + '</button>';
           }).join('')}
-          <button onclick="goSearchPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} style="padding:6px 12px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);color:${currentPage >= totalPages ? 'var(--text-muted) ' : 'var(--blue)'};border-radius:8px;cursor:${currentPage >= totalPages ? 'default' : 'pointer'};font-size:.8rem">下一页 ›</button>
+          <button onclick="goSearchPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} style="padding:6px 12px;background:rgba(10,107,92,0.1);border:1px solid rgba(10,107,92,0.2);color:${currentPage >= totalPages ? 'var(--text-muted) ' : 'var(--blue)'};border-radius:8px;cursor:${currentPage >= totalPages ? 'default' : 'pointer'};font-size:.8rem">下一页 ›</button>
           <span style="font-size:.75rem;color:var(--text-muted);margin-left:8px">${currentPage}/${totalPages}页</span>
         </div>
       ` : ''}
@@ -3550,15 +3948,22 @@ function renderSearchResults(results, total, hasMore) {
       container.style.transition = 'opacity 0.12s ease';
       container.style.opacity = '1';
     });
+    checkFavoriteStatus(filteredResults.map(r => r.id).filter(Boolean));
   } else {
     container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-secondary)">没有找到相关资源</div>';
   }
 }
 
-// 按来源筛选
+// 按来源筛选：走 API，避免只筛当前页 30 条
 function filterBySource(source) {
-  APP.sourceFilter = source;
-  renderSearchResults(APP.searchResults, APP.searchTotal, APP.searchResults.length < APP.searchTotal);
+  APP.sourceFilter = source || 'all';
+  APP.searchPage = 1;
+  const q = APP.searchQuery || document.getElementById('globalSearch')?.value?.trim() || '';
+  if (!q) {
+    renderSearchResults(APP.searchResults, APP.searchTotal, false);
+    return;
+  }
+  loadSearchResults(q, 1, true);
 }
 
 
@@ -3566,22 +3971,25 @@ function filterBySource(source) {
 // SEARCH
 // ============================================================
 function executeSearch() {
-  const q = document.getElementById('globalSearch').value.trim();
+  const q = (document.getElementById('globalSearch')?.value || '').trim();
   if (!q) return;
   searchResource(q);
 }
 
 function searchResource(query) {
-  document.getElementById('aggSearch').value = query;
-  navigateTo('search', document.querySelector('[data-page="search"]'));
-  document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
-  document.querySelector('[data-page="search"]')?.classList.add('active');
+  const q = (query || '').trim();
+  if (!q) return;
+  const g = document.getElementById('globalSearch');
+  if (g) g.value = q;
+  const h = document.getElementById('homeSearchInput');
+  if (h) h.value = q;
+  navigateTo('search');
   executeAggSearch();
 }
 
 let _searchTimer = null;
 function executeAggSearch() {
-  const q = document.getElementById('aggSearch').value.trim();
+  const q = (document.getElementById('globalSearch')?.value || '').trim();
   if (!q) return;
   // 防抖：300ms内多次输入只执行最后一次
   if (_searchTimer) clearTimeout(_searchTimer);
@@ -3593,31 +4001,35 @@ function _doSearch(q) {
   APP.searchResults = [];
   APP.sourceFilter = 'all';  // 重置筛选
   APP._onlinePollTimer = null;
+  APP.searchTotal = 0;
+  APP.sourceChipStats = null;
+  document.getElementById('onlineStatusBanner')?.remove();
   
   const container = document.getElementById('searchResults');
+  const skelRows = [0, 1, 2, 3, 4].map(() => `
+    <div class="search-skel-row" aria-hidden="true">
+      <div class="search-skel-thumb"></div>
+      <div class="search-skel-body">
+        <div class="search-skel-line w-65"></div>
+        <div class="search-skel-line w-42"></div>
+        <div class="search-skel-line w-28"></div>
+      </div>
+    </div>
+  `).join('');
   container.innerHTML = `
-    <div id="searchLoadingAnim" style="display:flex;flex-direction:column;align-items:center;gap:20px;padding:60px 20px">
-      <!-- 雷达扫描动画 -->
-      <div style="position:relative;width:80px;height:80px">
-        <div style="position:absolute;inset:0;border:2px solid rgba(0,212,255,0.15);border-radius:50%"></div>
-        <div style="position:absolute;inset:8px;border:2px solid rgba(0,212,255,0.1);border-radius:50%"></div>
-        <div style="position:absolute;inset:16px;border:1px solid rgba(0,212,255,0.08);border-radius:50%"></div>
-        <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,transparent 0%,rgba(0,212,255,0.6) 15%,transparent 30%);animation:radarSpin 2s linear infinite"></div>
-        <div style="position:absolute;top:50%;left:50%;width:6px;height:6px;margin:-3px 0 0 -3px;background:var(--blue);border-radius:50%;box-shadow:0 0 10px var(--blue),0 0 20px rgba(0,212,255,0.3)"></div>
+    <div id="searchLoadingAnim" class="search-loading" role="status" aria-live="polite">
+      <div class="search-loading-head">
+        <span class="search-loading-spinner" aria-hidden="true"></span>
+        <span class="search-loading-label">正在检索 <em>${q.replace(/[<>&"']/g, '')}</em></span>
       </div>
-      <!-- 跳动的点 -->
-      <div style="display:flex;gap:8px;align-items:center">
-        <div class="search-dot" style="width:6px;height:6px;background:var(--blue);border-radius:50%;animation:searchDot 1.4s ease-in-out infinite"></div>
-        <div class="search-dot" style="width:6px;height:6px;background:var(--blue);border-radius:50%;animation:searchDot 1.4s ease-in-out 0.2s infinite"></div>
-        <div class="search-dot" style="width:6px;height:6px;background:var(--blue);border-radius:50%;animation:searchDot 1.4s ease-in-out 0.4s infinite"></div>
-      </div>
-      <div style="font-size:.85rem;color:var(--text-secondary);letter-spacing:1px">搜索中</div>
+      ${skelRows}
     </div>
   `;
   
-  loadSearchResults(q, 1, true);
-  // v20260807_152131: 用户主动搜索时启动轮询（不再由 loadSearchResults 内部触发，避免循环）
-  _pollOnlineResults(q);
+  // v20260816: 先等本地库结果落盘，再启动在线轮询，避免「本地 0 · 新增=总计」假数据
+  loadSearchResults(q, 1, true).then((localTotal) => {
+    _pollOnlineResults(q, typeof localTotal === 'number' ? localTotal : (APP.searchTotal || 0));
+  });
 }
 
 // 加载搜索结果（首批30条动画滑入，剩余分页）
@@ -3625,12 +4037,25 @@ function _doSearch(q) {
 if (!APP.pageSize) APP.pageSize = 30;
 function loadSearchResults(q, page, isNew, appendOnly) {
   const container = document.getElementById('searchResults');
-  if (!container) return;
+  if (!container) return Promise.resolve(0);
   
-  fetch('/api/resources?q=' + encodeURIComponent(q) + '&page=' + page + '&per_page=' + APP.pageSize)
-    .then(r => r.json())
-    .then(d => {
+  const srcParam = (APP.sourceFilter && APP.sourceFilter !== 'all') ? '&source=' + encodeURIComponent(APP.sourceFilter) : '';
+  const resourcesUrl = '/api/resources?q=' + encodeURIComponent(q) + '&page=' + page + '&per_page=' + APP.pageSize + srcParam;
+  const tagsPromise = (!srcParam && isNew && !appendOnly)
+    ? fetch('/api/src_tags?q=' + encodeURIComponent(q)).then(r => r.json()).catch(() => null)
+    : Promise.resolve(null);
+
+  return Promise.all([
+    fetch(resourcesUrl).then(r => r.json()),
+    tagsPromise
+  ]).then(([d, tagsData]) => {
       const total = d.total || 0;
+      if (tagsData && tagsData.ok && Array.isArray(tagsData.tags)) {
+        APP.sourceChipStats = { _total: total };
+        tagsData.tags.forEach(t => {
+          if (t && t.source) APP.sourceChipStats[t.source] = t.cnt || 0;
+        });
+      }
       const items = (d.items || d.resources || []).map(it => {
         const src = detectSource(it.url) || it.source || '';
         return {
@@ -3654,11 +4079,13 @@ function loadSearchResults(q, page, isNew, appendOnly) {
           APP.searchTotal = total;
           _appendSearchResultCards(newItems, total);
           _updateResultCount(total);
+        } else {
+          APP.searchTotal = total;
+          _updateResultCount(total);
         }
-        return;
+        return total;
       }
       
-      const prevCount = APP.searchResults.length;
       if (isNew) {
         APP.searchResults = items;
       } else {
@@ -3669,22 +4096,11 @@ function loadSearchResults(q, page, isNew, appendOnly) {
       APP.searchTotal = total;
       
       renderSearchResults(APP.searchResults, total, APP.searchResults.length < total);
-      
-      // 首批30条瀑布动画，后续批次也带动画
-      if (isNew) {
-        
-      } else {
-        
-      }
-      
-      if (isNew) {
-        // v20260807_150308: 去掉冗余 toast（status banner 已显示同样的"本地 X 条"信息）
-        // v20260807_152131: 不再在 loadSearchResults 内启动轮询，避免循环
-        //   轮询只由 executeAggSearch 主动触发（用户的搜索行为）
-      }
+      return total;
     })
     .catch(e => {
       container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-secondary)">搜索出错: ' + e.message + '</div>';
+      return 0;
     });
 }
 
@@ -3711,7 +4127,7 @@ function _appendSearchResultCards(newItems, total) {
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();copyToClipboard('${(r.url||'').replace(/'/g,"\\'")}')" style="font-size:.72rem;padding:4px 8px">复制</button>
-          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toggleFavorite(this,'${clean}')" style="font-size:.72rem;padding:4px 8px">♡</button>
+          <button class="btn btn-ghost btn-sm fav-btn" data-id="${r.id || ''}" onclick="event.stopPropagation();toggleFavorite(this,${r.id || 0})" style="font-size:.72rem;padding:4px 8px">♡</button>
           ${(r.url && r.url.startsWith('magnet:')) ? '' : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();window.open('${(r.url||'').replace(/'/g,"\\'")}','_blank')" style="font-size:.72rem;padding:4px 8px">打开</button>`}
         </div>
       </div>`;
@@ -3734,7 +4150,7 @@ function _updateResultCount(total) {
 let _onlinePollCount = 0;
 let _onlineInitialCount = 0;  // 初次 DB 结果数（基准）
 let _onlineLastTotal = 0;
-function _pollOnlineResults(q) {
+function _pollOnlineResults(q, localBaseline) {
   // v20260807_152131: 防重复轮询 — 同一 keyword 已轮询中就跳过
   if (APP._onlinePollKeyword === q && APP._onlinePollTimer) {
     return;
@@ -3746,9 +4162,13 @@ function _pollOnlineResults(q) {
   }
   APP._onlinePollKeyword = q;
   _onlinePollCount = 0;
-  _onlineInitialCount = APP.searchTotal || 0;
+  // v20260816: 基准必须来自「本轮本地查询完成」后的 total，禁止用默认 0
+  _onlineInitialCount = Math.max(0, Number(localBaseline) || APP.searchTotal || 0);
   _onlineLastTotal = _onlineInitialCount;
   const initialPage1Count = APP.searchResults.length;
+
+  // 本地已有结果时，后端不会再触发在线搜：直接展示库内条数，短轮询确认状态即可
+  _updateOnlineStatusBanner(q, _onlineInitialCount, _onlineInitialCount, _onlineInitialCount > 0 ? 'local' : 'pending', 0);
 
   APP._onlinePollTimer = setInterval(() => {
     _onlinePollCount++;
@@ -3771,26 +4191,36 @@ function _pollOnlineResults(q) {
       const newTotal = dbData.total || 0;
       _onlineLastTotal = newTotal;
       const onlineAdded = statusData.imported || 0;
-      const status = statusData.status || 'pending';
+      let status = statusData.status || 'pending';
 
-      // 更新顶部横幅（"本地 X + 在线 Y = 总 Z"）
+      // 本地已有数据且未在跑在线搜：视为库内命中，不要把旧 Redis done 当成「本次新增」
+      if (_onlineInitialCount > 0 && status !== 'running') {
+        if (status === 'pending' || (status === 'done' && newTotal <= _onlineInitialCount)) {
+          clearInterval(APP._onlinePollTimer);
+          APP._onlinePollTimer = null;
+          APP._onlinePollKeyword = null;
+          _removeOnlineSkeleton();
+          _updateOnlineStatusBanner(q, newTotal, _onlineInitialCount, 'local', 0);
+          return;
+        }
+      }
+
+      // 本地 0 且一直 pending：后端可能未启动，继续等；超时后上面会收尾
       _updateOnlineStatusBanner(q, newTotal, _onlineInitialCount, status, onlineAdded);
 
       if (status === 'done' || status === 'error') {
-        // 在线搜索结束：重渲染页面 1，从 DB 取所有结果
         clearInterval(APP._onlinePollTimer);
         APP._onlinePollTimer = null;
         APP._onlinePollKeyword = null;
         _removeOnlineSkeleton();
-        if (newTotal > _onlineInitialCount) {
-          // 有新结果入库，重新拉
-          showToast(`在线搜索完成，新增 ${newTotal - _onlineInitialCount} 条`, 'success');
-          loadSearchResults(q, 1, true, true);  // 增量追加，不刷DOM
-        } else if (status === 'done') {
+        const gained = Math.max(0, newTotal - _onlineInitialCount);
+        if (gained > 0) {
+          showToast(`在线搜索完成，新增 ${gained} 条`, 'success');
+          loadSearchResults(q, 1, true, true);
+        } else if (status === 'done' && _onlineInitialCount === 0) {
           showToast('在线搜索完成，无新增结果', 'info');
         }
-      } else {
-        // 仍在搜索：每3秒从 DB 拉一次页面 1，重渲染（保留已渲染 + 新增）
+      } else if (status === 'running') {
         if (_onlinePollCount % 3 === 0 && newTotal > initialPage1Count) {
           loadSearchResults(q, 1, true, true);
         }
@@ -3799,13 +4229,13 @@ function _pollOnlineResults(q) {
   }, 1000);
 }
 
-// 更新在线搜索状态横幅（"本地 X 条 · 在线搜索中已导入 Y 条 · 总计 Z 条"）
+// 更新在线搜索状态横幅
 function _updateOnlineStatusBanner(q, total, initialTotal, status, imported) {
   let banner = document.getElementById('onlineStatusBanner');
   if (!banner) {
     banner = document.createElement('div');
     banner.id = 'onlineStatusBanner';
-    banner.style.cssText = 'margin:8px 16px;padding:8px 14px;border-radius:8px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);font-size:.85rem;color:var(--text-primary);display:flex;align-items:center;justify-content:space-between;gap:12px';
+    banner.style.cssText = 'margin:8px 16px;padding:8px 14px;border-radius:8px;background:rgba(10,107,92,0.08);border:1px solid rgba(10,107,92,0.2);font-size:.85rem;color:var(--text-primary);display:flex;align-items:center;justify-content:space-between;gap:12px';
     const container = document.getElementById('searchResults');
     if (container && container.parentNode) {
       container.parentNode.insertBefore(banner, container);
@@ -3813,20 +4243,32 @@ function _updateOnlineStatusBanner(q, total, initialTotal, status, imported) {
   }
   const onlineCount = Math.max(0, total - initialTotal);
   let statusText = '';
-  if (status === 'running' || status === 'pending') {
-    statusText = '<span class="online-spinner" style="display:inline-block;width:12px;height:12px;border:2px solid rgba(0,212,255,0.2);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite"></span> 在线搜索中…';
+  if (status === 'local') {
+    statusText = '<span style="color:var(--green)">✓ 库内结果</span>';
+  } else if (status === 'running' || (status === 'pending' && initialTotal === 0)) {
+    statusText = '<span class="search-loading-spinner" style="width:12px;height:12px;border-width:1.5px;display:inline-block;vertical-align:-2px"></span> 在线补充中…';
+  } else if (status === 'pending') {
+    statusText = '<span style="color:var(--text-secondary)">库内检索</span>';
   } else if (status === 'done') {
-    statusText = '<span style="color:#3fb950">✓ 在线搜索完成</span>';
+    statusText = onlineCount > 0
+      ? '<span style="color:#3fb950">✓ 在线搜索完成</span>'
+      : '<span style="color:var(--green)">✓ 库内结果</span>';
   } else if (status === 'error') {
     statusText = '<span style="color:#f85149">⚠ 在线搜索出错</span>';
   }
+
+  let countHtml = '';
+  if (status === 'local' || (status === 'done' && onlineCount === 0)) {
+    countHtml = `库内 <strong style="color:var(--text-primary)">${total}</strong> 条`;
+  } else if (onlineCount > 0) {
+    countHtml = `库内 <strong style="color:var(--text-primary)">${initialTotal}</strong> 条 · 本次新增 <strong style="color:var(--blue)">${onlineCount}</strong> 条 · 合计 <strong style="color:var(--text-primary)">${total}</strong> 条`;
+  } else {
+    countHtml = `库内 <strong style="color:var(--text-primary)">${initialTotal}</strong> 条`;
+  }
+
   banner.innerHTML = `
     <span>${statusText}</span>
-    <span style="color:var(--text-secondary);font-size:.8rem">
-      本地 <strong style="color:var(--text-primary)">${initialTotal}</strong> 条 ·
-      新增 <strong style="color:var(--blue)">${onlineCount}</strong> 条 ·
-      总计 <strong style="color:var(--text-primary)">${total}</strong> 条
-    </span>
+    <span style="color:var(--text-secondary);font-size:.8rem">${countHtml}</span>
   `;
 }
 
@@ -3839,39 +4281,31 @@ function _insertOnlineSkeleton(afterIndex) {
   if (!cardContainer) return;
   const cards = cardContainer.querySelectorAll('.resource-card');
   
-  // 插入分隔线+骨架
   const skeleton = document.createElement('div');
   skeleton.className = 'online-loading-skeleton';
-  skeleton.style.cssText = 'margin:8px 0;opacity:0;transition:opacity 0.4s ease';
   skeleton.innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-      <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.3),rgba(0,212,255,0.5),rgba(0,212,255,0.3),transparent)"></div>
-      <span style="font-size:.75rem;color:var(--blue);white-space:nowrap;font-weight:500;display:flex;align-items:center;gap:6px">
-        <span class="online-spinner" style="display:inline-block;width:12px;height:12px;border:2px solid rgba(0,212,255,0.2);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite"></span>
-        在线搜索中…
+    <div class="online-loading-divider">
+      <span class="online-loading-label">
+        <span class="search-loading-spinner" aria-hidden="true"></span>
+        在线补充中…
       </span>
-      <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.3),rgba(0,212,255,0.5),rgba(0,212,255,0.3),transparent)"></div>
     </div>
-    ${[1,2,3].map(() => `
-      <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;padding:10px 12px;margin-bottom:8px;opacity:0.4">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:36px;height:36px;border-radius:8px;background:rgba(0,212,255,0.1);animation:pulse 1.5s ease infinite"></div>
-          <div style="flex:1">
-            <div style="height:14px;width:60%;background:rgba(255,255,255,0.06);border-radius:4px;animation:pulse 1.5s ease infinite"></div>
-            <div style="height:10px;width:30%;background:rgba(255,255,255,0.04);border-radius:4px;margin-top:6px;animation:pulse 1.5s ease 0.2s infinite"></div>
-          </div>
+    ${[1, 2, 3].map(() => `
+      <div class="search-skel-row" aria-hidden="true" style="margin-bottom:8px;opacity:.85">
+        <div class="search-skel-thumb" style="width:36px;height:36px;border-radius:8px"></div>
+        <div class="search-skel-body">
+          <div class="search-skel-line w-65"></div>
+          <div class="search-skel-line w-28"></div>
         </div>
       </div>
     `).join('')}
   `;
-  
-  // 插入到对应位置
+
   if (afterIndex < cards.length) {
     cards[afterIndex].parentNode.insertBefore(skeleton, cards[afterIndex]);
   } else {
     cardContainer.appendChild(skeleton);
   }
-  setTimeout(() => skeleton.style.opacity = '1', 50);
 }
 
 // 移除加载骨架
@@ -3907,7 +4341,7 @@ function _appendCardsToDOM(items) {
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();copyToClipboard('${(r.url||'').replace(/'/g,"\\'")}')\" style="font-size:.72rem;padding:4px 8px">复制</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toggleFavorite(this,'${clean}')" style="font-size:.72rem;padding:4px 8px">♡</button>
+        <button class="btn btn-ghost btn-sm fav-btn" data-id="${r.id || ''}" onclick="event.stopPropagation();toggleFavorite(this,${r.id || 0})" style="font-size:.72rem;padding:4px 8px">♡</button>
         ${isMagnet ? '' : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();window.open('${(r.url||'').replace(/'/g,"\\'")}','_blank')" style="font-size:.72rem;padding:4px 8px">打开</button>`}
       </div>
     `;
@@ -3942,9 +4376,11 @@ async function loadAnimeCategory(el) {
   document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
   document.querySelector('[data-page="home"]')?.classList.add('active');
 
-  // 隐藏子分类
-  document.getElementById('movieSub').style.display = 'none';
-  document.getElementById('tvSub').style.display = 'none';
+  // 侧栏分类已移除；兼容旧调用
+  const movieSub = document.getElementById('movieSub');
+  const tvSub = document.getElementById('tvSub');
+  if (movieSub) movieSub.style.display = 'none';
+  if (tvSub) tvSub.style.display = 'none';
 
   // 隐藏section-header和filter-bar
   document.querySelectorAll('.section-header').forEach(h => h.style.display = 'none');
@@ -3978,12 +4414,12 @@ async function loadAnimeCategory(el) {
 }
 
 function goToTopRated(mediaType) {
-  // v20260807_144417: 保留兼容，但侧栏入口已删除
-  // 展开对应子分类
-  document.getElementById('movieSub').style.display = (mediaType === 'movie') ? 'block' : 'none';
-  document.getElementById('tvSub').style.display = (mediaType === 'tv') ? 'block' : 'none';
+  // 侧栏入口已删除；保留兼容
+  const movieSub = document.getElementById('movieSub');
+  const tvSub = document.getElementById('tvSub');
+  if (movieSub) movieSub.style.display = (mediaType === 'movie') ? 'block' : 'none';
+  if (tvSub) tvSub.style.display = (mediaType === 'tv') ? 'block' : 'none';
 
-  // 选中经典子分类
   const subMenu = document.getElementById(mediaType + 'Sub');
   if (subMenu) {
     subMenu.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -3991,7 +4427,6 @@ function goToTopRated(mediaType) {
     if (topRatedBtn) topRatedBtn.classList.add('active');
   }
 
-  // 加载经典数据
   loadSubCategory(mediaType, 'top_rated');
 }
 
@@ -4001,9 +4436,10 @@ function filterCategory(type) {
   document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
   document.querySelector('[data-page="home"]')?.classList.add('active');
 
-  // 显示/隐藏子分类
-  document.getElementById('movieSub').style.display = (type === 'movie') ? 'block' : 'none';
-  document.getElementById('tvSub').style.display = (type === 'tv') ? 'block' : 'none';
+  const movieSub = document.getElementById('movieSub');
+  const tvSub = document.getElementById('tvSub');
+  if (movieSub) movieSub.style.display = (type === 'movie') ? 'block' : 'none';
+  if (tvSub) tvSub.style.display = (type === 'tv') ? 'block' : 'none';
 
   // 显示section-header和filter-bar
   document.querySelectorAll('.section-header').forEach(h => h.style.display = '');
@@ -4034,9 +4470,11 @@ async function loadSubCategory(mediaType, subType, el) {
   document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
   document.querySelector('[data-page="home"]')?.classList.add('active');
 
-  // 显示对应子分类，隐藏另一个
-  document.getElementById('movieSub').style.display = (mediaType === 'movie') ? 'block' : 'none';
-  document.getElementById('tvSub').style.display = (mediaType === 'tv') ? 'block' : 'none';
+  // 侧栏子菜单已移除
+  const movieSub = document.getElementById('movieSub');
+  const tvSub = document.getElementById('tvSub');
+  if (movieSub) movieSub.style.display = (mediaType === 'movie') ? 'block' : 'none';
+  if (tvSub) tvSub.style.display = (mediaType === 'tv') ? 'block' : 'none';
 
   // 显示section-header和filter-bar
   document.querySelectorAll('.section-header').forEach(h => h.style.display = '');
@@ -4297,10 +4735,14 @@ const Cache = {
 // KEYBOARD SHORTCUTS
 // ============================================================
 document.addEventListener('keydown', (e) => {
-  // Ctrl/Cmd + K → focus search
+  // Ctrl/Cmd + K → focus contextual search
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
     e.preventDefault();
-    document.getElementById('globalSearch').focus();
+    const page = APP.currentPage || 'home';
+    const el = page === 'home'
+      ? document.getElementById('homeSearchInput')
+      : document.getElementById('globalSearch');
+    (el || document.getElementById('globalSearch'))?.focus();
   }
   // Escape → close modals
   if (e.key === 'Escape') {
@@ -4313,10 +4755,6 @@ document.getElementById('globalSearch')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') executeSearch();
 });
 
-document.getElementById('aggSearch')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') executeAggSearch();
-});
-
 
 // ============================================================
 // INIT
@@ -4326,31 +4764,39 @@ document.getElementById('aggSearch')?.addEventListener('keydown', (e) => {
   try {
     const ur = await fetch('/api/user/me');
     const ud = await ur.json();
-    if (ud.logged_in) {
-      const userArea = document.getElementById('userArea');
-      if (userArea) {
-        if (ud.is_admin) {
-          userArea.innerHTML = `
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="btn btn-ghost btn-sm" onclick="window.location.href='/admin'" title="后台管理">⚙ 管理</button>
-              <span style="font-size:0.82rem;color:var(--text-secondary)">${ud.username}</span>
-              <button class="btn btn-ghost btn-sm" onclick="window.location.href='/logout'">退出</button>
-            </div>
-          `;
-        } else {
-          userArea.innerHTML = `
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="btn btn-ghost btn-sm" onclick="window.location.href='/profile'" title="我的收藏">♥ 我的</button>
-              <span style="font-size:0.82rem;color:var(--text-secondary)">${ud.username}</span>
-              <button class="btn btn-ghost btn-sm" onclick="window.location.href='/logout'">退出</button>
-            </div>
-          `;
-        }
+    const userArea = document.getElementById('userArea');
+    if (userArea) {
+      if (ud.logged_in) {
+        const name = (ud.username || '用户').replace(/[<>&"']/g, '');
+        const homeLink = ud.is_admin
+          ? `<a class="btn btn-ghost btn-sm" href="/admin" title="后台管理">管理</a>`
+          : `<a class="btn btn-ghost btn-sm" href="/profile" title="我的收藏">我的</a>`;
+        userArea.innerHTML = `
+          <div class="user-chip">
+            ${homeLink}
+            <span class="user-name" title="${name}">${name}</span>
+            <a class="btn btn-ghost btn-sm btn-switch" href="/logout?next=/login" title="退出并换账号登录">换账号</a>
+            <a class="btn btn-ghost btn-sm" href="/logout?next=/login">退出</a>
+          </div>
+        `;
+      } else {
+        // 未登录：强制渲染可跳转的登录链接（不用 onclick，避免缓存/拦截）
+        userArea.innerHTML = `<a class="btn btn-ghost btn-sm" href="/login" id="headerLoginBtn">登录</a>`;
       }
     }
-  } catch(e) {}
+  } catch(e) {
+    const userArea = document.getElementById('userArea');
+    if (userArea) {
+      userArea.innerHTML = `<a class="btn btn-ghost btn-sm" href="/login" id="headerLoginBtn">登录</a>`;
+    }
+  }
 
   // 加载统计
+  // 累计访问打点（30 分钟内同浏览器只计 1 次）
+  try {
+    fetch('/api/visit', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+  } catch(e) {}
+
   try {
     const sr = await fetch('/api/stats');
     const sd = await sr.json();
@@ -4380,10 +4826,19 @@ document.getElementById('aggSearch')?.addEventListener('keydown', (e) => {
     loadPosterWall(POSTER_WALL_TYPE)  // v20260807_154100 海报墙
   ]);
 
+  // 支持 /?q=关键词 直达检索（收藏页「搜索」跳转）
+  try {
+    const q = new URLSearchParams(location.search).get('q');
+    if (q && q.trim()) {
+      searchResource(q.trim());
+      history.replaceState({}, '', '/');
+    }
+  } catch (e) {}
+
   // Populate logs
   refreshLogs();
 
-  console.log('[VaultDrive] Frontend initialized — connected to backend');
+  console.log('[VaultDrive] Daylight Archive UI — connected to backend');
 })();
 
 // 骨架屏加载
@@ -4445,7 +4900,7 @@ function showSkeleton(containerId, count = 6) {
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
       const c = this.color === 'blue'
-        ? 'rgba(0, 212, 255, ' + this.alpha + ')'
+        ? 'rgba(10, 107, 92, ' + this.alpha + ')'
         : 'rgba(123, 97, 255, ' + this.alpha + ')';
       ctx.fillStyle = c;
       ctx.fill();
@@ -4467,7 +4922,7 @@ function showSkeleton(containerId, count = 6) {
           ctx.moveTo(particles[i].x, particles[i].y);
           ctx.lineTo(particles[j].x, particles[j].y);
           const sc = particles[i].color === 'blue'
-            ? 'rgba(0, 212, 255, ' + (0.08 * (1 - dist / CONNECT_DIST)) + ')'
+            ? 'rgba(10, 107, 92, ' + (0.08 * (1 - dist / CONNECT_DIST)) + ')'
             : 'rgba(123, 97, 255, ' + (0.08 * (1 - dist / CONNECT_DIST)) + ')';
           ctx.strokeStyle = sc;
           ctx.lineWidth = 0.6;

@@ -3,541 +3,449 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>登录 - 资源雷达</title>
+<title>登录 · VaultDrive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800&family=Sora:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
-/* ═══════════ CYBER CINEMA LOGIN ═══════════ */
-
 :root {
-  --void: #06080f;
-  --abyss: #0a0e1a;
-  --deep: #0f1525;
-  --surface: #141c30;
-  --surface-glass: rgba(15,21,37,0.72);
-  --glass-border: rgba(255,255,255,0.06);
-  --glass-border-h: rgba(0,210,255,0.25);
-  --cyan: #00d2ff;
-  --cyan-dim: rgba(0,210,255,0.15);
-  --cyan-glow: rgba(0,210,255,0.35);
-  --magenta: #ff2d95;
-  --magenta-dim: rgba(255,45,149,0.15);
-  --gold: #ffd866;
-  --text: #e8ecf4;
-  --text2: #8892a8;
-  --text3: #5a6478;
-  --text4: #3a4258;
-  --r: 10px;
-  --r-lg: 16px;
-  --r-xl: 24px;
-  --r-full: 9999px;
-  --shadow: 0 4px 16px rgba(0,0,0,0.5);
-  --shadow-lg: 0 12px 40px rgba(0,0,0,0.6);
-  --shadow-neon: 0 0 30px rgba(0,210,255,0.15);
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --t: 0.25s;
-  --t-slow: 0.4s;
+  --bg: #000000;
+  --ink: #f5f5f5;
+  --muted: #a3a3a3;
+  --faint: #737373;
+  --card: rgba(18, 18, 18, 0.92);
+  --border: rgba(255, 255, 255, 0.12);
+  --teal: #2dd4bf;
+  --teal-dim: #14b8a6;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --font-display: 'Fraunces', 'Noto Sans SC', Georgia, serif;
+  --font-body: 'Sora', 'Noto Sans SC', sans-serif;
 }
-
-/* ── Reset ── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-html { height: 100%; }
-
+html, body { height: 100%; }
 body {
-  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
-  background: var(--void);
-  color: var(--text);
+  font-family: var(--font-body);
+  color: var(--ink);
   min-height: 100vh;
-  overflow: hidden;
-  line-height: 1.5;
-  font-size: 14px;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  background: #000000;
 }
-
-/* ═══════════ STARFIELD ═══════════ */
-body::before {
+.stage {
+  position: fixed;
+  inset: -6%;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 18% 28%, rgba(45, 212, 191, 0.10), transparent 60%),
+    radial-gradient(ellipse 55% 45% at 82% 72%, rgba(255, 255, 255, 0.03), transparent 55%),
+    linear-gradient(160deg, #000000 0%, #050505 48%, #000000 100%);
+  background-size: 120% 120%;
+  animation: drift 28s ease-in-out infinite alternate;
+}
+.stage::before {
   content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 72px 96px;
+  mask-image: radial-gradient(ellipse 65% 55% at 50% 45%, #000 15%, transparent 75%);
+  pointer-events: none;
+}
+@keyframes drift {
+  from { transform: translate3d(0,0,0) scale(1); }
+  to { transform: translate3d(-2%, 1.2%, 0) scale(1.05); }
+}
+.veil {
   position: fixed;
   inset: 0;
-  background:
-    radial-gradient(1.5px 1.5px at 20% 30%, rgba(255,255,255,0.4), transparent),
-    radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(1.5px 1.5px at 60% 20%, rgba(255,255,255,0.35), transparent),
-    radial-gradient(1px 1px at 80% 50%, rgba(255,255,255,0.25), transparent),
-    radial-gradient(1.2px 1.2px at 10% 80%, rgba(0,210,255,0.3), transparent),
-    radial-gradient(1px 1px at 90% 15%, rgba(255,45,149,0.25), transparent),
-    radial-gradient(1px 1px at 50% 90%, rgba(255,255,255,0.2), transparent),
-    radial-gradient(1.5px 1.5px at 30% 55%, rgba(255,216,102,0.2), transparent);
-  background-size: 300px 300px;
-  animation: starDrift 60s linear infinite;
-  z-index: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.78) 70%);
   pointer-events: none;
 }
-@keyframes starDrift {
-  to { background-position: 300px 300px; }
-}
-
-/* ═══════════ ANIMATED GRADIENT MESH ═══════════ */
-body::after {
-  content: '';
-  position: fixed;
-  top: -30%; left: -10%;
-  width: 60vw; height: 60vw;
-  background: radial-gradient(circle, rgba(0,210,255,0.06) 0%, transparent 70%);
-  animation: ambientFloat 20s ease-in-out infinite alternate;
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* Second ambient orb */
-.login-ambient-2 {
-  position: fixed;
-  bottom: -25%; right: -10%;
-  width: 55vw; height: 55vw;
-  background: radial-gradient(circle, rgba(255,45,149,0.05) 0%, transparent 70%);
-  animation: ambientFloat2 22s ease-in-out infinite alternate;
-  z-index: 0;
-  pointer-events: none;
-}
-
-@keyframes ambientFloat {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(15vw, 10vh) scale(1.2); }
-}
-@keyframes ambientFloat2 {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(-12vw, -8vh) scale(1.15); }
-}
-
-/* ═══════════ FLOATING ORBS ═══════════ */
-.orbs { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.35;
-}
-.orb1 {
-  width: 280px; height: 280px;
-  background: var(--cyan);
-  top: -8%; left: 8%;
-  animation: orbFloat1 16s ease-in-out infinite alternate;
-}
-.orb2 {
-  width: 220px; height: 220px;
-  background: var(--magenta);
-  top: 25%; right: 8%;
-  animation: orbFloat2 20s ease-in-out infinite alternate;
-}
-.orb3 {
-  width: 180px; height: 180px;
-  background: var(--gold);
-  bottom: -5%; left: 35%;
-  animation: orbFloat3 14s ease-in-out infinite alternate;
-}
-@keyframes orbFloat1 {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(35px, 25px); }
-}
-@keyframes orbFloat2 {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-25px, -18px); }
-}
-@keyframes orbFloat3 {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(18px, -22px); }
-}
-
-/* ═══════════ GLASSMORPHISM CARD ═══════════ */
 .login-card {
   position: relative;
   z-index: 10;
-  width: 100%;
-  max-width: 420px;
-  padding: 2.5rem 2rem;
-  margin: 1rem;
-
-  /* Glassmorphism */
-  background: rgba(10, 14, 26, 0.72);
-  backdrop-filter: blur(24px) saturate(1.5);
-  -webkit-backdrop-filter: blur(24px) saturate(1.5);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--r-xl);
-
-  /* Depth & Glow */
-  box-shadow:
-    0 20px 60px rgba(0,0,0,0.5),
-    0 0 0 1px rgba(255,255,255,0.04),
-    inset 0 1px 0 rgba(255,255,255,0.05);
-
-  /* Entrance animation */
-  animation: cardEntrance 0.6s var(--spring) both;
+  width: min(420px, calc(100% - 2rem));
+  padding: 2.4rem 2rem 2rem;
+  background: var(--card);
+  backdrop-filter: blur(16px) saturate(1.1);
+  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 24px 48px rgba(0,0,0,0.65);
+  animation: rise 0.75s var(--ease) both;
 }
-
-@keyframes cardEntrance {
-  0% {
-    opacity: 0;
-    transform: translateY(30px) scale(0.96);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
-/* Subtle hover glow */
-.login-card:hover {
-  border-color: rgba(0,210,255,0.12);
-  box-shadow:
-    0 20px 60px rgba(0,0,0,0.5),
-    0 0 0 1px rgba(255,255,255,0.04),
-    0 0 40px rgba(0,210,255,0.06),
-    inset 0 1px 0 rgba(255,255,255,0.05);
-  transition: box-shadow 0.4s var(--ease), border-color 0.4s var(--ease);
+.logo-area { text-align: center; margin-bottom: 1.75rem; }
+.kicker {
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--teal);
+  font-weight: 600;
+  margin-bottom: 10px;
 }
-
-/* ═══════════ LOGO / HEADING ═══════════ */
-.logo-area {
-  text-align: center;
-  margin-bottom: 2rem;
-  animation: fadeUp 0.5s 0.1s var(--ease) both;
-}
-@keyframes fadeUp {
-  0% { opacity: 0; transform: translateY(10px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-.logo-area .logo-icon {
-  width: 60px; height: 60px;
-  margin: 0 auto 1rem;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--cyan-dim), rgba(124,92,255,0.12));
-  border: 1px solid rgba(0,210,255,0.15);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.4rem;
-  color: var(--cyan);
-  box-shadow: 0 0 30px rgba(0,210,255,0.1);
-  animation: iconPulse 3s ease-in-out infinite;
-}
-@keyframes iconPulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(0,210,255,0.1); }
-  50% { box-shadow: 0 0 35px rgba(0,210,255,0.2); }
-}
-
 .logo-area h1 {
-  font-size: 1.5rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 8vw, 2.8rem);
   font-weight: 800;
-  letter-spacing: -0.03em;
-  margin-bottom: 0.35rem;
-  background: linear-gradient(135deg, var(--cyan), #7c5cff, var(--magenta));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  animation: breath 6s ease-in-out infinite;
 }
-
+@keyframes breath {
+  0%, 100% { letter-spacing: -0.04em; }
+  50% { letter-spacing: -0.028em; }
+}
 .logo-area p {
-  color: var(--text3);
-  font-size: 0.85rem;
-  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.92rem;
 }
-
-/* ═══════════ ERROR MESSAGE ═══════════ */
 .error-msg {
-  background: rgba(239,68,68,0.08);
-  border: 1px solid rgba(239,68,68,0.25);
-  color: #ff6b6b;
-  padding: 0.6rem 1rem;
-  border-radius: var(--r);
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #fca5a5;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
   font-size: 0.85rem;
   text-align: center;
   margin-bottom: 1rem;
   display: none;
-  animation: errorShake 0.4s var(--ease);
 }
-@keyframes errorShake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-6px); }
-  40% { transform: translateX(6px); }
-  60% { transform: translateX(-3px); }
-  80% { transform: translateX(3px); }
-}
-
-/* ═══════════ INPUT FIELDS ═══════════ */
 .input-group {
   position: relative;
-  margin-bottom: 1rem;
-  animation: fadeUp 0.5s 0.2s var(--ease) both;
+  margin-bottom: 0.85rem;
 }
-.input-group:nth-child(2) { animation-delay: 0.25s; }
-
-.input-group i {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text4);
-  font-size: 0.9rem;
-  transition: color var(--t);
-  z-index: 2;
-  pointer-events: none;
-}
-
 .input-group input {
   width: 100%;
-  padding: 0.85rem 1rem 0.85rem 2.8rem;
-  background: rgba(20, 28, 48, 0.6);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: var(--r);
-  color: var(--text);
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #121212;
+  color: var(--ink);
+  font-family: inherit;
   font-size: 0.95rem;
-  font-family: inherit;
   outline: none;
-  transition: all var(--t) var(--ease);
-  position: relative;
-  z-index: 1;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
-
-.input-group input::placeholder {
-  color: var(--text4);
-  font-weight: 400;
-}
-
+.input-group input::placeholder { color: var(--faint); }
 .input-group input:focus {
-  border-color: var(--cyan);
-  background: rgba(20, 28, 48, 0.8);
-  box-shadow:
-    0 0 0 3px var(--cyan-dim),
-    0 0 20px rgba(0,210,255,0.08),
-    inset 0 0 20px rgba(0,210,255,0.02);
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.18);
 }
-
-.input-group input:focus ~ i,
-.input-group input:focus + i {
-  color: var(--cyan);
-}
-
-/* ═══════════ LOGIN BUTTON ═══════════ */
-.btn-wrap {
-  margin-top: 0.5rem;
-  animation: fadeUp 0.5s 0.3s var(--ease) both;
-}
-
-.btn-login {
+.input-group i { display: none; }
+.btn-wrap { margin-top: 0.85rem; }
+.btn-login, .btn-github, .btn-tg {
   width: 100%;
-  padding: 0.85rem;
+  height: 48px;
   border: none;
-  border-radius: var(--r);
-  background: linear-gradient(135deg, var(--cyan), #0189a8);
-  color: white;
-  font-size: 1rem;
-  font-weight: 700;
+  border-radius: 999px;
   font-family: inherit;
-  cursor: pointer;
-  transition: all var(--t) var(--ease);
-  position: relative;
-  overflow: hidden;
-  letter-spacing: 0.02em;
-}
-
-/* Shimmer sweep */
-.btn-login::before {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%;
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-  transition: left 0.5s var(--ease);
-}
-.btn-login:hover::before {
-  left: 100%;
-}
-
-.btn-login:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 8px 30px rgba(0,210,255,0.3),
-    0 0 0 1px rgba(0,210,255,0.2);
-}
-
-.btn-login:active {
-  transform: translateY(0);
-  box-shadow: 0 4px 15px rgba(0,210,255,0.2);
-}
-
-.btn-login i {
-  margin-right: 0.4rem;
-}
-
-/* ═══════════ GITHUB OAUTH BUTTON ═══════════ */
-.btn-github {
-  width: 100%;
-  padding: 0.85rem;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: var(--r);
-  background: rgba(20, 28, 48, 0.6);
-  color: var(--text);
   font-size: 0.95rem;
   font-weight: 600;
-  font-family: inherit;
   cursor: pointer;
-  transition: all var(--t) var(--ease);
-  position: relative;
-  overflow: hidden;
-  letter-spacing: 0.02em;
-  backdrop-filter: blur(8px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.25s var(--ease), background 0.2s ease, border-color 0.2s ease;
 }
-.btn-github i {
-  margin-right: 0.4rem;
-  font-size: 1.1rem;
+.btn-login {
+  background: var(--teal);
+  color: #000;
+}
+.btn-login:hover { background: var(--teal-dim); transform: translateY(-1px); }
+.btn-login:disabled { opacity: 0.7; cursor: wait; transform: none; }
+.btn-tg {
+  background: #2AABEE;
+  color: #fff;
+  margin-bottom: 0.35rem;
+}
+.btn-tg:hover { filter: brightness(0.95); transform: translateY(-1px); }
+.btn-tg:disabled { opacity: 0.75; cursor: wait; transform: none; }
+.btn-github {
+  background: #121212;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  margin-bottom: 0.35rem;
 }
 .btn-github:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255,255,255,0.3);
-  background: rgba(30, 40, 65, 0.8);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  border-color: var(--teal);
+  color: var(--teal);
+  transform: translateY(-1px);
 }
-.btn-github:active {
-  transform: translateY(0);
+.tg-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0.35rem 0 0.5rem;
+  min-height: 0;
 }
-
-/* ═══════════ BACK LINK ═══════════ */
+.tg-hint {
+  font-size: 0.75rem;
+  color: var(--faint);
+  text-align: center;
+  line-height: 1.45;
+}
+.tg-hint a { color: var(--teal); }
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0.85rem 0;
+  color: var(--faint);
+  font-size: 0.75rem;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 .back-link {
   display: block;
   text-align: center;
-  margin-top: 1.5rem;
-  color: var(--text3);
+  margin-top: 1.35rem;
+  color: var(--muted);
   font-size: 0.85rem;
   text-decoration: none;
-  transition: all var(--t) var(--ease);
-  animation: fadeUp 0.5s 0.35s var(--ease) both;
 }
-.back-link:hover {
-  color: var(--cyan);
-  text-shadow: 0 0 20px rgba(0,210,255,0.3);
-}
-.back-link i {
-  margin-right: 0.3rem;
-  transition: transform var(--t) var(--ease);
-}
-.back-link:hover i {
-  transform: translateX(-3px);
-}
-
-/* ═══════════ FOOTER ═══════════ */
+.back-link:hover { color: var(--teal); }
 .login-footer {
   position: fixed;
-  bottom: 1.5rem;
-  left: 0;
-  right: 0;
+  bottom: 1.25rem;
+  left: 0; right: 0;
   text-align: center;
   z-index: 10;
-  animation: fadeUp 0.6s 0.5s var(--ease) both;
-}
-.login-footer span {
   font-size: 0.72rem;
-  color: var(--text4);
+  color: var(--faint);
   letter-spacing: 0.04em;
 }
-.login-footer span i {
-  color: var(--cyan);
-  font-size: 0.65rem;
-}
-
-/* ═══════════ RESPONSIVE ═══════════ */
 @media (max-width: 480px) {
-  .login-card { padding: 2rem 1.5rem; }
-  .logo-area h1 { font-size: 1.25rem; }
-  .orb1 { width: 200px; height: 200px; }
-  .orb2 { width: 160px; height: 160px; }
-  .orb3 { width: 120px; height: 120px; }
+  .login-card { padding: 2rem 1.35rem 1.6rem; }
 }
 </style>
 <script src="/site-settings.js"></script>
 </head>
 <body>
+<div class="stage" aria-hidden="true"></div>
+<div class="veil" aria-hidden="true"></div>
 
-<!-- Background orbs -->
-<div class="orbs">
-  <div class="orb orb1"></div>
-  <div class="orb orb2"></div>
-  <div class="orb orb3"></div>
-</div>
-<div class="login-ambient-2"></div>
-
-<!-- Login card -->
 <div class="login-card">
   <div class="logo-area">
-    <div class="logo-icon">
-      <i class="fas fa-film"></i>
-    </div>
-    <h1>资源雷达</h1>
-    <p>登录后台管理</p>
+    <div class="kicker">私人胶片库</div>
+    <h1>VaultDrive</h1>
+    <p>登录以同步收藏与管理资源</p>
   </div>
 
   <div class="error-msg" id="err"></div>
 
-  <div class="input-group">
-    <input id="u" placeholder="用户名" autofocus>
-    <i class="fas fa-user"></i>
+  <div class="btn-wrap" style="margin-top:0">
+    <button type="button" class="btn-tg" id="tgBotLoginBtn" onclick="startTelegramBotLogin()">使用 Telegram 登录</button>
+  </div>
+  <div class="tg-wrap" id="tgLoginWrap">
+    <div class="tg-hint" id="tgHint"></div>
   </div>
 
+  <div class="divider">或</div>
+
+  <div class="btn-wrap" style="margin-top:0">
+    <button type="button" class="btn-github" onclick="doGithubLogin()">使用 GitHub 登录</button>
+  </div>
+
+  <div class="divider">账号密码</div>
+
+  <div class="input-group">
+    <input id="u" placeholder="用户名" autofocus onkeydown="if(event.key==='Enter')document.getElementById('p').focus()">
+  </div>
   <div class="input-group">
     <input id="p" type="password" placeholder="密码" onkeydown="if(event.key==='Enter')doLogin()">
-    <i class="fas fa-lock"></i>
   </div>
 
-  <!-- GitHub OAuth 登录 -->
-  <div class="btn-wrap" style="animation: fadeUp 0.5s 0.32s var(--ease) both;">
-    <button class="btn-github" onclick="doGithubLogin()">
-      <i class="fab fa-github"></i> 使用 GitHub 登录
-    </button>
-  </div>
-
-  <!-- CSRF Token 隐藏字段 -->
   <input type="hidden" id="csrf_token" name="csrf_token" value="">
 
   <div class="btn-wrap">
-    <button class="btn-login" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> 登录</button>
+    <button class="btn-login" onclick="doLogin()">登录</button>
   </div>
 
-  <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> 返回首页</a>
+  <a href="/" class="back-link">← 返回首页</a>
 </div>
 
-<!-- Footer branding -->
-<div class="login-footer">
-  <span><i class="fas fa-film"></i> Cyber Cinema &nbsp;·&nbsp; Powered by Quark Drive</span>
-</div>
+<div class="login-footer">VaultDrive · Pure Black</div>
 
 <script>
+(function showUrlError() {
+  var m = location.search.match(/[?&]error=([^&]+)/);
+  if (!m) return;
+  var err = document.getElementById('err');
+  err.style.display = 'block';
+  err.textContent = decodeURIComponent(m[1].replace(/^tg_/, ''));
+})();
+
+async function onTelegramAuth(user) {
+  var err = document.getElementById('err');
+  err.style.display = 'none';
+  try {
+    var csrfResp = await fetch('/api/csrf-token');
+    var csrfData = await csrfResp.json();
+    var csrfToken = csrfData.csrf_token;
+    var r = await fetch('/login/telegram', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify(Object.assign({}, user, { csrf_token: csrfToken }))
+    });
+    var d = await r.json();
+    if (r.ok && d.ok) {
+      location.href = d.role === 'admin' ? '/admin' : '/';
+    } else {
+      err.style.display = 'block';
+      err.textContent = d.error || 'Telegram 登录失败';
+    }
+  } catch (e) {
+    err.style.display = 'block';
+    err.textContent = '网络错误，请重试';
+  }
+}
+window.onTelegramAuth = onTelegramAuth;
+
+var _tgLoginPoll = null;
+async function startTelegramBotLogin() {
+  var err = document.getElementById('err');
+  var hint = document.getElementById('tgHint');
+  var btn = document.getElementById('tgBotLoginBtn');
+  err.style.display = 'none';
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = '打开 Bot 中…'; }
+    var csrfResp = await fetch('/api/csrf-token');
+    var csrfData = await csrfResp.json();
+    var r = await fetch('/api/auth/telegram/login-code', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfData.csrf_token || ''
+      },
+      body: '{}'
+    });
+    var d = await r.json();
+    if (d.already) {
+      location.href = d.redirect || '/';
+      return;
+    }
+    if (!r.ok || !d.ok) {
+      err.style.display = 'block';
+      err.textContent = d.error || '无法启动 Telegram 登录';
+      if (btn) { btn.disabled = false; btn.textContent = '使用 Telegram 登录'; }
+      return;
+    }
+    if (hint) {
+      hint.innerHTML = '请在 Telegram 打开 <a href="' + d.deep_link + '" target="_blank" rel="noopener">@' + d.bot_username + '</a> 确认登录<br>确认后本页会自动跳转';
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '再次打开 Bot';
+      btn.onclick = function () { window.open(d.deep_link, '_blank', 'noopener'); };
+    }
+    window.open(d.deep_link, '_blank', 'noopener');
+    if (_tgLoginPoll) clearInterval(_tgLoginPoll);
+    var n = 0;
+    _tgLoginPoll = setInterval(async function () {
+      n += 1;
+      try {
+        var pr = await fetch('/api/auth/telegram/login-poll?code=' + encodeURIComponent(d.code));
+        var pd = await pr.json();
+        if (pd.status === 'ready') {
+          clearInterval(_tgLoginPoll);
+          var csrf2 = await fetch('/api/csrf-token').then(function (x) { return x.json(); });
+          var cr = await fetch('/api/auth/telegram/login-complete', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrf2.csrf_token || ''
+            },
+            body: JSON.stringify({ code: d.code })
+          });
+          var cd = await cr.json();
+          if (cr.ok && cd.ok) {
+            location.href = cd.role === 'admin' ? '/admin' : '/';
+          } else {
+            err.style.display = 'block';
+            err.textContent = cd.error || '登录完成失败';
+            if (btn) btn.textContent = '使用 Telegram 登录';
+          }
+        } else if (pd.status === 'expired') {
+          clearInterval(_tgLoginPoll);
+          if (hint) hint.textContent = '登录码已过期，请重新点击 Telegram 登录';
+          if (btn) {
+            btn.textContent = '使用 Telegram 登录';
+            btn.onclick = startTelegramBotLogin;
+          }
+        }
+      } catch (e) {}
+      if (n >= 100) clearInterval(_tgLoginPoll);
+    }, 2000);
+  } catch (e) {
+    err.style.display = 'block';
+    err.textContent = '网络错误，请重试';
+    if (btn) { btn.disabled = false; btn.textContent = '使用 Telegram 登录'; }
+  }
+}
+
+async function initTelegramLogin() {
+  // 只用 Bot 深链登录，不挂官方 Login Widget（未 /setdomain 时会露出「Bot domain invalid」）
+  var hint = document.getElementById('tgHint');
+  try {
+    var r = await fetch('/api/telegram/login-config');
+    var cfg = await r.json();
+    if (!cfg.enabled || !cfg.bot_username) {
+      var btn = document.getElementById('tgBotLoginBtn');
+      if (btn) btn.disabled = true;
+      if (hint) hint.textContent = cfg.hint || 'Telegram 登录未启用（需配置 Bot）';
+      return;
+    }
+    if (hint && cfg.required_chat_link) {
+      hint.innerHTML = '纯内测：仅 <a href="' + cfg.required_chat_link + '" target="_blank" rel="noopener">' + (cfg.required_chat || '指定群') + '</a> 成员可登录 / 开户';
+    }
+  } catch (e) {
+    if (hint) hint.textContent = '';
+  }
+}
+initTelegramLogin();
+
 async function doLogin() {
   var err = document.getElementById('err');
   var btn = document.querySelector('.btn-login');
   err.style.display = 'none';
 
-  // Show loading state
   var originalHTML = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...';
+  btn.innerHTML = '登录中…';
   btn.style.opacity = '0.7';
   btn.style.pointerEvents = 'none';
 
   try {
-    // 获取 CSRF token
     var csrfResp = await fetch('/api/csrf-token');
     var csrfData = await csrfResp.json();
     var csrfToken = csrfData.csrf_token;
     var r = await fetch('/login', {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'X-CSRFToken': csrfToken
       },
@@ -554,11 +462,6 @@ async function doLogin() {
       var d = await r.json();
       err.style.display = 'block';
       err.textContent = d.error || '登录失败';
-      // Re-trigger shake animation
-      err.style.animation = 'none';
-      err.offsetHeight;
-      err.style.animation = '';
-      // Restore button
       btn.disabled = false;
       btn.innerHTML = originalHTML;
       btn.style.opacity = '';
@@ -567,7 +470,6 @@ async function doLogin() {
   } catch (e) {
     err.style.display = 'block';
     err.textContent = '网络错误，请重试';
-    // Restore button
     btn.disabled = false;
     btn.innerHTML = originalHTML;
     btn.style.opacity = '';
